@@ -1,0 +1,161 @@
+openapi: 3.0.2
+info:
+  title: Tonkeeper TWA API.
+  version: 0.0.1
+  description: REST API for Tonkeeper TWA.
+  contact:
+    name: Support
+    email: support@tonkeeper.com
+servers:
+  - url: "https://twa-api.tonkeeper.com"
+  - url: "https://test-twa-api.tonkeeper.com"
+paths:
+  /tonconnect/payload:
+    get:
+      description: Get a challenge for TON Connect.
+      operationId: getTonConnectPayload
+      responses:
+        '200':
+          description: payload
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - payload
+                properties:
+                  payload:
+                    type: string
+                    example: "84jHVNLQmZsAAAAAZB0Zryi2wqVJI-KaKNXOvCijEi46YyYzkaSHyJrMPBMOkVZa"
+        'default':
+          $ref: '#/components/responses/Error'
+
+  /tonconnect/subscribe:
+    post:
+      description: Subscribe to notifications about events in the TON blockchain for the specified address.
+      operationId: subscribeToAccountEvents
+      requestBody:
+        $ref: "#/components/requestBodies/SubscriptionRequest"
+      responses:
+        '200':
+          description: "success"
+        'default':
+          $ref: '#/components/responses/Error'
+
+  /tonconnect/unsubscribe:
+    post:
+      description: Unsubscribe from notifications about events in the TON blockchain for the specified address.
+      operationId: unsubscribeFromAccountEvents
+      requestBody:
+        $ref: "#/components/requestBodies/CancelSubscriptionRequest"
+      responses:
+        '200':
+          description: "success"
+        'default':
+          $ref: '#/components/responses/Error'
+
+components:
+  parameters:
+    token:
+      in: header
+      name: X-TonConnect-Auth
+      schema:
+        type: string
+        example: NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2ODQ3...
+      required: true
+
+  requestBodies:
+    CancelSubscriptionRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - twa_init_data
+            properties:
+              twa_init_data:
+                type: string
+                description: "Base64 encoded twa init data"
+                example: "YXV0aF9kYXRlPTxhdXRoX2RhdGU+XG5xdWVyeV9pZD08cXVlcnlfaWQ+XG51c2VyPTx1c2VyPg=="
+
+    SubscriptionRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - twa_init_data
+              - address
+              - proof
+            properties:
+              twa_init_data:
+                type: string
+                description: "Base64 encoded twa init data"
+                example: "YXV0aF9kYXRlPTxhdXRoX2RhdGU+XG5xdWVyeV9pZD08cXVlcnlfaWQ+XG51c2VyPTx1c2VyPg=="
+              address:
+                type: string
+                description: "Wallet or smart contract address"
+                example: "0:97146a46acc2654y27947f14c4a4b14273e954f78bc017790b41208b0043200b"
+              proof:
+                type: object
+                description: "TON Connect proof of ownership of the address"
+                required:
+                  - timestamp
+                  - domain
+                  - signature
+                  - payload
+                properties:
+                  timestamp:
+                    type: integer
+                    format: int64
+                    example: "1678275313"
+                  domain:
+                    type: object
+                    required:
+                      - value
+                    properties:
+                      length_bytes:
+                        type: integer
+                        format: uint32
+                      value:
+                        type: string
+                  signature:
+                    type: string
+                  payload:
+                    type: string
+                    example: "84jHVNLQmZsAAAAAZB0Zryi2wqVJI-KaKNXOvCijEi46YyYzkaSHyJrMPBMOkVZa"
+                  state_init:
+                    type: string
+  schemas:
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          example: error description
+
+    Balance:
+      type: object
+      required:
+        - balance
+      properties:
+        balance:
+          type: string
+          example: "10.250"
+
+  responses:
+    Error:
+      description: Some error during request processing
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - error
+            properties:
+              error:
+                type: string

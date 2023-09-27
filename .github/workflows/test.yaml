@@ -1,0 +1,44 @@
+name: test
+on:
+  pull_request:
+    branches:
+      - '*'
+  push:
+    branches:
+      - 'dev'
+      - 'master'
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: twa
+        ports:
+          - 5432:5432
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Go Version
+        uses: actions/setup-go@v3
+        with:
+          go-version: '1.20'
+      - name: test
+        env:
+          LD_LIBRARY_PATH: ${{ github.workspace }}/libs
+          POSTGRES_URI: postgresql://postgres:postgres@localhost:5432/twa?sslmode=disable
+        run: |
+          mkdir -p ${{ env.LD_LIBRARY_PATH}}
+          wget https://github.com/tonkeeper/tongo/raw/master/lib/linux/libemulator.so -O ${{ env.LD_LIBRARY_PATH}}/libemulator.so
+          make test
