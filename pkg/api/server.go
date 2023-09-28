@@ -26,7 +26,11 @@ func NewServer(log *zap.Logger, pool *pgxpool.Pool, handler *Handler, address st
 	for _, o := range opts {
 		o(options)
 	}
-	ogenServer, err := oas.NewServer(handler)
+
+	ogenMiddlewares := []oas.Middleware{ogenLoggingMiddleware(log)}
+	ogenServer, err := oas.NewServer(handler,
+		oas.WithMiddleware(ogenMiddlewares...))
+
 	if err != nil {
 		return nil, err
 	}
