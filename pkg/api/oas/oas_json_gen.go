@@ -1029,10 +1029,17 @@ func (s *UnsubscribeFromBridgeEventsReq) encodeFields(e *jx.Encoder) {
 		e.FieldStart("twa_init_data")
 		e.Str(s.TwaInitData)
 	}
+	{
+		if s.ClientID.Set {
+			e.FieldStart("client_id")
+			s.ClientID.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfUnsubscribeFromBridgeEventsReq = [1]string{
+var jsonFieldsNameOfUnsubscribeFromBridgeEventsReq = [2]string{
 	0: "twa_init_data",
+	1: "client_id",
 }
 
 // Decode decodes UnsubscribeFromBridgeEventsReq from json.
@@ -1055,6 +1062,16 @@ func (s *UnsubscribeFromBridgeEventsReq) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"twa_init_data\"")
+			}
+		case "client_id":
+			if err := func() error {
+				s.ClientID.Reset()
+				if err := s.ClientID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"client_id\"")
 			}
 		default:
 			return d.Skip()

@@ -373,7 +373,8 @@ type UnsubscribeFromBridgeEventsOK struct{}
 
 type UnsubscribeFromBridgeEventsReq struct {
 	// Base64 encoded twa init data.
-	TwaInitData string `json:"twa_init_data"`
+	TwaInitData string    `json:"twa_init_data"`
+	ClientID    OptString `json:"client_id"`
 }
 
 // GetTwaInitData returns the value of TwaInitData.
@@ -381,7 +382,17 @@ func (s *UnsubscribeFromBridgeEventsReq) GetTwaInitData() string {
 	return s.TwaInitData
 }
 
+// GetClientID returns the value of ClientID.
+func (s *UnsubscribeFromBridgeEventsReq) GetClientID() OptString {
+	return s.ClientID
+}
+
 // SetTwaInitData sets the value of TwaInitData.
 func (s *UnsubscribeFromBridgeEventsReq) SetTwaInitData(val string) {
 	s.TwaInitData = val
+}
+
+// SetClientID sets the value of ClientID.
+func (s *UnsubscribeFromBridgeEventsReq) SetClientID(val OptString) {
+	s.ClientID = val
 }
