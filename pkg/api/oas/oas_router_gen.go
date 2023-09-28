@@ -48,8 +48,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		switch elem[0] {
-		case '/': // Prefix: "/tonconnect/"
-			if l := len("/tonconnect/"); len(elem) >= l && elem[0:l] == "/tonconnect/" {
+		case '/': // Prefix: "/"
+			if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
 				elem = elem[l:]
 			} else {
 				break
@@ -59,8 +59,122 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				break
 			}
 			switch elem[0] {
-			case 'p': // Prefix: "payload"
-				if l := len("payload"); len(elem) >= l && elem[0:l] == "payload" {
+			case 'a': // Prefix: "account-events/"
+				if l := len("account-events/"); len(elem) >= l && elem[0:l] == "account-events/" {
+					elem = elem[l:]
+				} else {
+					break
+				}
+
+				if len(elem) == 0 {
+					break
+				}
+				switch elem[0] {
+				case 's': // Prefix: "subscribe"
+					if l := len("subscribe"); len(elem) >= l && elem[0:l] == "subscribe" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						// Leaf node.
+						switch r.Method {
+						case "POST":
+							s.handleSubscribeToAccountEventsRequest([0]string{}, elemIsEscaped, w, r)
+						default:
+							s.notAllowed(w, r, "POST")
+						}
+
+						return
+					}
+				case 'u': // Prefix: "unsubscribe"
+					if l := len("unsubscribe"); len(elem) >= l && elem[0:l] == "unsubscribe" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						// Leaf node.
+						switch r.Method {
+						case "POST":
+							s.handleUnsubscribeFromAccountEventsRequest([0]string{}, elemIsEscaped, w, r)
+						default:
+							s.notAllowed(w, r, "POST")
+						}
+
+						return
+					}
+				}
+			case 'b': // Prefix: "bridge/"
+				if l := len("bridge/"); len(elem) >= l && elem[0:l] == "bridge/" {
+					elem = elem[l:]
+				} else {
+					break
+				}
+
+				if len(elem) == 0 {
+					break
+				}
+				switch elem[0] {
+				case 's': // Prefix: "subscribe"
+					if l := len("subscribe"); len(elem) >= l && elem[0:l] == "subscribe" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						// Leaf node.
+						switch r.Method {
+						case "POST":
+							s.handleSubscribeToBridgeEventsRequest([0]string{}, elemIsEscaped, w, r)
+						default:
+							s.notAllowed(w, r, "POST")
+						}
+
+						return
+					}
+				case 'u': // Prefix: "unsubscribe"
+					if l := len("unsubscribe"); len(elem) >= l && elem[0:l] == "unsubscribe" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						// Leaf node.
+						switch r.Method {
+						case "POST":
+							s.handleUnsubscribeFromBridgeEventsRequest([0]string{}, elemIsEscaped, w, r)
+						default:
+							s.notAllowed(w, r, "POST")
+						}
+
+						return
+					}
+				case 'w': // Prefix: "webhook/client_id"
+					if l := len("webhook/client_id"); len(elem) >= l && elem[0:l] == "webhook/client_id" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						// Leaf node.
+						switch r.Method {
+						case "POST":
+							s.handleBridgeWebhookRequest([0]string{}, elemIsEscaped, w, r)
+						default:
+							s.notAllowed(w, r, "POST")
+						}
+
+						return
+					}
+				}
+			case 't': // Prefix: "tonconnect/payload"
+				if l := len("tonconnect/payload"); len(elem) >= l && elem[0:l] == "tonconnect/payload" {
 					elem = elem[l:]
 				} else {
 					break
@@ -73,42 +187,6 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						s.handleGetTonConnectPayloadRequest([0]string{}, elemIsEscaped, w, r)
 					default:
 						s.notAllowed(w, r, "GET")
-					}
-
-					return
-				}
-			case 's': // Prefix: "subscribe"
-				if l := len("subscribe"); len(elem) >= l && elem[0:l] == "subscribe" {
-					elem = elem[l:]
-				} else {
-					break
-				}
-
-				if len(elem) == 0 {
-					// Leaf node.
-					switch r.Method {
-					case "POST":
-						s.handleSubscribeToAccountEventsRequest([0]string{}, elemIsEscaped, w, r)
-					default:
-						s.notAllowed(w, r, "POST")
-					}
-
-					return
-				}
-			case 'u': // Prefix: "unsubscribe"
-				if l := len("unsubscribe"); len(elem) >= l && elem[0:l] == "unsubscribe" {
-					elem = elem[l:]
-				} else {
-					break
-				}
-
-				if len(elem) == 0 {
-					// Leaf node.
-					switch r.Method {
-					case "POST":
-						s.handleUnsubscribeFromAccountEventsRequest([0]string{}, elemIsEscaped, w, r)
-					default:
-						s.notAllowed(w, r, "POST")
 					}
 
 					return
@@ -188,8 +266,8 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 			break
 		}
 		switch elem[0] {
-		case '/': // Prefix: "/tonconnect/"
-			if l := len("/tonconnect/"); len(elem) >= l && elem[0:l] == "/tonconnect/" {
+		case '/': // Prefix: "/"
+			if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
 				elem = elem[l:]
 			} else {
 				break
@@ -199,8 +277,137 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 				break
 			}
 			switch elem[0] {
-			case 'p': // Prefix: "payload"
-				if l := len("payload"); len(elem) >= l && elem[0:l] == "payload" {
+			case 'a': // Prefix: "account-events/"
+				if l := len("account-events/"); len(elem) >= l && elem[0:l] == "account-events/" {
+					elem = elem[l:]
+				} else {
+					break
+				}
+
+				if len(elem) == 0 {
+					break
+				}
+				switch elem[0] {
+				case 's': // Prefix: "subscribe"
+					if l := len("subscribe"); len(elem) >= l && elem[0:l] == "subscribe" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						switch method {
+						case "POST":
+							// Leaf: SubscribeToAccountEvents
+							r.name = "SubscribeToAccountEvents"
+							r.operationID = "subscribeToAccountEvents"
+							r.pathPattern = "/account-events/subscribe"
+							r.args = args
+							r.count = 0
+							return r, true
+						default:
+							return
+						}
+					}
+				case 'u': // Prefix: "unsubscribe"
+					if l := len("unsubscribe"); len(elem) >= l && elem[0:l] == "unsubscribe" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						switch method {
+						case "POST":
+							// Leaf: UnsubscribeFromAccountEvents
+							r.name = "UnsubscribeFromAccountEvents"
+							r.operationID = "unsubscribeFromAccountEvents"
+							r.pathPattern = "/account-events/unsubscribe"
+							r.args = args
+							r.count = 0
+							return r, true
+						default:
+							return
+						}
+					}
+				}
+			case 'b': // Prefix: "bridge/"
+				if l := len("bridge/"); len(elem) >= l && elem[0:l] == "bridge/" {
+					elem = elem[l:]
+				} else {
+					break
+				}
+
+				if len(elem) == 0 {
+					break
+				}
+				switch elem[0] {
+				case 's': // Prefix: "subscribe"
+					if l := len("subscribe"); len(elem) >= l && elem[0:l] == "subscribe" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						switch method {
+						case "POST":
+							// Leaf: SubscribeToBridgeEvents
+							r.name = "SubscribeToBridgeEvents"
+							r.operationID = "subscribeToBridgeEvents"
+							r.pathPattern = "/bridge/subscribe"
+							r.args = args
+							r.count = 0
+							return r, true
+						default:
+							return
+						}
+					}
+				case 'u': // Prefix: "unsubscribe"
+					if l := len("unsubscribe"); len(elem) >= l && elem[0:l] == "unsubscribe" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						switch method {
+						case "POST":
+							// Leaf: UnsubscribeFromBridgeEvents
+							r.name = "UnsubscribeFromBridgeEvents"
+							r.operationID = "unsubscribeFromBridgeEvents"
+							r.pathPattern = "/bridge/unsubscribe"
+							r.args = args
+							r.count = 0
+							return r, true
+						default:
+							return
+						}
+					}
+				case 'w': // Prefix: "webhook/client_id"
+					if l := len("webhook/client_id"); len(elem) >= l && elem[0:l] == "webhook/client_id" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						switch method {
+						case "POST":
+							// Leaf: BridgeWebhook
+							r.name = "BridgeWebhook"
+							r.operationID = "bridgeWebhook"
+							r.pathPattern = "/bridge/webhook/client_id"
+							r.args = args
+							r.count = 0
+							return r, true
+						default:
+							return
+						}
+					}
+				}
+			case 't': // Prefix: "tonconnect/payload"
+				if l := len("tonconnect/payload"); len(elem) >= l && elem[0:l] == "tonconnect/payload" {
 					elem = elem[l:]
 				} else {
 					break
@@ -213,48 +420,6 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 						r.name = "GetTonConnectPayload"
 						r.operationID = "getTonConnectPayload"
 						r.pathPattern = "/tonconnect/payload"
-						r.args = args
-						r.count = 0
-						return r, true
-					default:
-						return
-					}
-				}
-			case 's': // Prefix: "subscribe"
-				if l := len("subscribe"); len(elem) >= l && elem[0:l] == "subscribe" {
-					elem = elem[l:]
-				} else {
-					break
-				}
-
-				if len(elem) == 0 {
-					switch method {
-					case "POST":
-						// Leaf: SubscribeToAccountEvents
-						r.name = "SubscribeToAccountEvents"
-						r.operationID = "subscribeToAccountEvents"
-						r.pathPattern = "/tonconnect/subscribe"
-						r.args = args
-						r.count = 0
-						return r, true
-					default:
-						return
-					}
-				}
-			case 'u': // Prefix: "unsubscribe"
-				if l := len("unsubscribe"); len(elem) >= l && elem[0:l] == "unsubscribe" {
-					elem = elem[l:]
-				} else {
-					break
-				}
-
-				if len(elem) == 0 {
-					switch method {
-					case "POST":
-						// Leaf: UnsubscribeFromAccountEvents
-						r.name = "UnsubscribeFromAccountEvents"
-						r.operationID = "unsubscribeFromAccountEvents"
-						r.pathPattern = "/tonconnect/unsubscribe"
 						r.args = args
 						r.count = 0
 						return r, true

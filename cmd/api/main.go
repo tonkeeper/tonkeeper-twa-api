@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/tonkeeper/tonkeeper-twa-api/pkg/telegram"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
@@ -42,13 +43,21 @@ func main() {
 	if err != nil {
 		logger.Fatal("storage.New() failed", zap.Error(err))
 	}
-	notificator, err := core.NewNotificator(logger, s, cfg.Telegram.BotSecretKey, cfg.TonAPI.ApiKey)
+	notificator, err := core.NewNotificator(logger, s, cfg.TonAPI.ApiKey)
 	if err != nil {
 		logger.Fatal("core.NewNotificator() failed", zap.Error(err))
 	}
-	go notificator.Run(context.TODO())
+	bot, err := telegram.NewBot(logger, cfg.Telegram.BotSecretKey)
+	if err != nil {
+		logger.Fatal("telegram.NewBot() failed", zap.Error(err))
+	}
+	messageCh := bot.Run(context.TODO())
 
-	handler, err := api.NewHandler(logger, notificator, config)
+	go notificator.Run(context.TODO(), messageCh)
+
+	bridge := core.NewBridge(logger, messageCh)
+
+	handler, err := api.NewHandler(logger, notificator, bridge, config)
 	if err != nil {
 		logger.Fatal("api.NewHandler() failed", zap.Error(err))
 	}

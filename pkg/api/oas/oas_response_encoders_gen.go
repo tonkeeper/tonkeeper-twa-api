@@ -13,6 +13,13 @@ import (
 	ht "github.com/ogen-go/ogen/http"
 )
 
+func encodeBridgeWebhookResponse(response *BridgeWebhookOK, w http.ResponseWriter, span trace.Span) error {
+	w.WriteHeader(200)
+	span.SetStatus(codes.Ok, http.StatusText(200))
+
+	return nil
+}
+
 func encodeGetTonConnectPayloadResponse(response *GetTonConnectPayloadOK, w http.ResponseWriter, span trace.Span) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
@@ -34,7 +41,21 @@ func encodeSubscribeToAccountEventsResponse(response *SubscribeToAccountEventsOK
 	return nil
 }
 
+func encodeSubscribeToBridgeEventsResponse(response *SubscribeToBridgeEventsOK, w http.ResponseWriter, span trace.Span) error {
+	w.WriteHeader(200)
+	span.SetStatus(codes.Ok, http.StatusText(200))
+
+	return nil
+}
+
 func encodeUnsubscribeFromAccountEventsResponse(response *UnsubscribeFromAccountEventsOK, w http.ResponseWriter, span trace.Span) error {
+	w.WriteHeader(200)
+	span.SetStatus(codes.Ok, http.StatusText(200))
+
+	return nil
+}
+
+func encodeUnsubscribeFromBridgeEventsResponse(response *UnsubscribeFromBridgeEventsOK, w http.ResponseWriter, span trace.Span) error {
 	w.WriteHeader(200)
 	span.SetStatus(codes.Ok, http.StatusText(200))
 

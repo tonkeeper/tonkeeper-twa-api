@@ -10,6 +10,34 @@ func (s *ErrorStatusCode) Error() string {
 	return fmt.Sprintf("code %d: %+v", s.StatusCode, s.Response)
 }
 
+// BridgeWebhookOK is response for BridgeWebhook operation.
+type BridgeWebhookOK struct{}
+
+type BridgeWebhookReq struct {
+	Topic string `json:"topic"`
+	Hash  string `json:"hash"`
+}
+
+// GetTopic returns the value of Topic.
+func (s *BridgeWebhookReq) GetTopic() string {
+	return s.Topic
+}
+
+// GetHash returns the value of Hash.
+func (s *BridgeWebhookReq) GetHash() string {
+	return s.Hash
+}
+
+// SetTopic sets the value of Topic.
+func (s *BridgeWebhookReq) SetTopic(val string) {
+	s.Topic = val
+}
+
+// SetHash sets the value of Hash.
+func (s *BridgeWebhookReq) SetHash(val string) {
+	s.Hash = val
+}
+
 type Error struct {
 	Error string `json:"error"`
 }
@@ -282,6 +310,35 @@ func (s *SubscribeToAccountEventsReqProofDomain) SetValue(val string) {
 	s.Value = val
 }
 
+// SubscribeToBridgeEventsOK is response for SubscribeToBridgeEvents operation.
+type SubscribeToBridgeEventsOK struct{}
+
+type SubscribeToBridgeEventsReq struct {
+	// Base64 encoded twa init data.
+	TwaInitData string `json:"twa_init_data"`
+	ClientID    string `json:"client_id"`
+}
+
+// GetTwaInitData returns the value of TwaInitData.
+func (s *SubscribeToBridgeEventsReq) GetTwaInitData() string {
+	return s.TwaInitData
+}
+
+// GetClientID returns the value of ClientID.
+func (s *SubscribeToBridgeEventsReq) GetClientID() string {
+	return s.ClientID
+}
+
+// SetTwaInitData sets the value of TwaInitData.
+func (s *SubscribeToBridgeEventsReq) SetTwaInitData(val string) {
+	s.TwaInitData = val
+}
+
+// SetClientID sets the value of ClientID.
+func (s *SubscribeToBridgeEventsReq) SetClientID(val string) {
+	s.ClientID = val
+}
+
 // UnsubscribeFromAccountEventsOK is response for UnsubscribeFromAccountEvents operation.
 type UnsubscribeFromAccountEventsOK struct{}
 
@@ -297,5 +354,23 @@ func (s *UnsubscribeFromAccountEventsReq) GetTwaInitData() string {
 
 // SetTwaInitData sets the value of TwaInitData.
 func (s *UnsubscribeFromAccountEventsReq) SetTwaInitData(val string) {
+	s.TwaInitData = val
+}
+
+// UnsubscribeFromBridgeEventsOK is response for UnsubscribeFromBridgeEvents operation.
+type UnsubscribeFromBridgeEventsOK struct{}
+
+type UnsubscribeFromBridgeEventsReq struct {
+	// Base64 encoded twa init data.
+	TwaInitData string `json:"twa_init_data"`
+}
+
+// GetTwaInitData returns the value of TwaInitData.
+func (s *UnsubscribeFromBridgeEventsReq) GetTwaInitData() string {
+	return s.TwaInitData
+}
+
+// SetTwaInitData sets the value of TwaInitData.
+func (s *UnsubscribeFromBridgeEventsReq) SetTwaInitData(val string) {
 	s.TwaInitData = val
 }

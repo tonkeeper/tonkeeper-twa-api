@@ -2,14 +2,12 @@ package api
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
-	"time"
 
-	initData "github.com/Telegram-Web-Apps/init-data-golang"
 	"github.com/tonkeeper/tongo"
 	"github.com/tonkeeper/tongo/liteapi"
 	"github.com/tonkeeper/tongo/tonconnect"
+	"github.com/tonkeeper/tonkeeper-twa-api/pkg/telegram"
 	"go.uber.org/zap"
 
 	"github.com/tonkeeper/tonkeeper-twa-api/pkg/api/oas"
@@ -21,7 +19,8 @@ type Handler struct {
 
 	telegramSecret string
 	tonConnect     *tonconnect.Server
-	notificator    *core.Notificator
+	notificator    *core.AccountEventsNotificator
+	bridge         *core.Bridge
 }
 
 type Config struct {
@@ -31,7 +30,7 @@ type Config struct {
 
 var _ oas.Handler = (*Handler)(nil)
 
-func NewHandler(logger *zap.Logger, notificator *core.Notificator, config Config) (*Handler, error) {
+func NewHandler(logger *zap.Logger, notificator *core.AccountEventsNotificator, bridge *core.Bridge, config Config) (*Handler, error) {
 	cli, err := liteapi.NewClient(liteapi.Mainnet(), liteapi.FromEnvs())
 	if err != nil {
 		return nil, err
@@ -42,6 +41,7 @@ func NewHandler(logger *zap.Logger, notificator *core.Notificator, config Config
 	}
 	return &Handler{
 		logger:         logger,
+		bridge:         bridge,
 		tonConnect:     tonConnect,
 		notificator:    notificator,
 		telegramSecret: config.TelegramBotSecret,
@@ -63,25 +63,6 @@ func (h *Handler) GetTonConnectPayload(ctx context.Context) (*oas.GetTonConnectP
 		return nil, InternalError(err)
 	}
 	return &oas.GetTonConnectPayloadOK{Payload: payload}, nil
-}
-
-func extractUserIDFromInitData(data string, telegramSecret string) (core.TelegramUserID, error) {
-	// TODO: use right duration
-	twaInitData, err := base64.StdEncoding.DecodeString(data)
-	if err != nil {
-		return 0, fmt.Errorf("failed to decode init data")
-	}
-	if err := initData.Validate(string(twaInitData), telegramSecret, time.Duration(0)); err != nil {
-		return 0, fmt.Errorf("failed to validate init data")
-	}
-	parsedData, err := initData.Parse(string(twaInitData))
-	if err != nil {
-		return 0, fmt.Errorf("failed to parse init data")
-	}
-	if parsedData.User == nil {
-		return 0, fmt.Errorf("user not found in init data")
-	}
-	return core.TelegramUserID(parsedData.User.ID), nil
 }
 
 func (h *Handler) SubscribeToAccountEvents(ctx context.Context, req *oas.SubscribeToAccountEventsReq) error {
@@ -106,7 +87,7 @@ func (h *Handler) SubscribeToAccountEvents(ctx context.Context, req *oas.Subscri
 	if !verified {
 		return BadRequest("failed to verify proof")
 	}
-	userID, err := extractUserIDFromInitData(req.TwaInitData, h.telegramSecret)
+	userID, err := telegram.ExtractUserIDFromInitData(req.TwaInitData, h.telegramSecret)
 	if err != nil {
 		return BadRequest(err.Error())
 	}
@@ -117,11 +98,38 @@ func (h *Handler) SubscribeToAccountEvents(ctx context.Context, req *oas.Subscri
 }
 
 func (h *Handler) UnsubscribeFromAccountEvents(ctx context.Context, req *oas.UnsubscribeFromAccountEventsReq) error {
-	userID, err := extractUserIDFromInitData(req.TwaInitData, h.telegramSecret)
+	userID, err := telegram.ExtractUserIDFromInitData(req.TwaInitData, h.telegramSecret)
 	if err != nil {
 		return BadRequest(err.Error())
 	}
 	if err := h.notificator.Unsubscribe(userID); err != nil {
+		return InternalError(err)
+	}
+	return nil
+}
+
+func (h *Handler) SubscribeToBridgeEvents(ctx context.Context, req *oas.SubscribeToBridgeEventsReq) error {
+	userID, err := telegram.ExtractUserIDFromInitData(req.TwaInitData, h.telegramSecret)
+	if err != nil {
+		return BadRequest(err.Error())
+	}
+	if err := h.bridge.Subscribe(userID, core.ClientID(req.ClientID)); err != nil {
+		return InternalError(err)
+	}
+	return nil
+}
+
+func (h *Handler) BridgeWebhook(ctx context.Context, req *oas.BridgeWebhookReq, params oas.BridgeWebhookParams) error {
+	h.bridge.HandleWebhook(core.ClientID(params.ClientID), req.Topic, req.Hash)
+	return nil
+}
+
+func (h *Handler) UnsubscribeFromBridgeEvents(ctx context.Context, req *oas.UnsubscribeFromBridgeEventsReq) error {
+	userID, err := telegram.ExtractUserIDFromInitData(req.TwaInitData, h.telegramSecret)
+	if err != nil {
+		return BadRequest(err.Error())
+	}
+	if err := h.bridge.Unsubscribe(userID); err != nil {
 		return InternalError(err)
 	}
 	return nil

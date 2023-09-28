@@ -11,6 +11,20 @@ import (
 	ht "github.com/ogen-go/ogen/http"
 )
 
+func encodeBridgeWebhookRequest(
+	req *BridgeWebhookReq,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := jx.GetEncoder()
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
 func encodeSubscribeToAccountEventsRequest(
 	req *SubscribeToAccountEventsReq,
 	r *http.Request,
@@ -25,8 +39,36 @@ func encodeSubscribeToAccountEventsRequest(
 	return nil
 }
 
+func encodeSubscribeToBridgeEventsRequest(
+	req *SubscribeToBridgeEventsReq,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := jx.GetEncoder()
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
 func encodeUnsubscribeFromAccountEventsRequest(
 	req *UnsubscribeFromAccountEventsReq,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := jx.GetEncoder()
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeUnsubscribeFromBridgeEventsRequest(
+	req *UnsubscribeFromBridgeEventsReq,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"

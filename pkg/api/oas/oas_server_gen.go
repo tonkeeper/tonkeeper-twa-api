@@ -8,6 +8,10 @@ import (
 
 // Handler handles operations described by OpenAPI v3 specification.
 type Handler interface {
+	// BridgeWebhook implements bridgeWebhook operation.
+	//
+	// POST /bridge/webhook/client_id
+	BridgeWebhook(ctx context.Context, req *BridgeWebhookReq, params BridgeWebhookParams) error
 	// GetTonConnectPayload implements getTonConnectPayload operation.
 	//
 	// Get a challenge for TON Connect.
@@ -18,14 +22,26 @@ type Handler interface {
 	//
 	// Subscribe to notifications about events in the TON blockchain for the specified address.
 	//
-	// POST /tonconnect/subscribe
+	// POST /account-events/subscribe
 	SubscribeToAccountEvents(ctx context.Context, req *SubscribeToAccountEventsReq) error
+	// SubscribeToBridgeEvents implements subscribeToBridgeEvents operation.
+	//
+	// Subscribe to notifications from the HTTP Bridge regarding a specific smart contract or wallet.
+	//
+	// POST /bridge/subscribe
+	SubscribeToBridgeEvents(ctx context.Context, req *SubscribeToBridgeEventsReq) error
 	// UnsubscribeFromAccountEvents implements unsubscribeFromAccountEvents operation.
 	//
 	// Unsubscribe from notifications about events in the TON blockchain for the specified address.
 	//
-	// POST /tonconnect/unsubscribe
+	// POST /account-events/unsubscribe
 	UnsubscribeFromAccountEvents(ctx context.Context, req *UnsubscribeFromAccountEventsReq) error
+	// UnsubscribeFromBridgeEvents implements unsubscribeFromBridgeEvents operation.
+	//
+	// Unsubscribe from bridge notifications.
+	//
+	// POST /bridge/unsubscribe
+	UnsubscribeFromBridgeEvents(ctx context.Context, req *UnsubscribeFromBridgeEventsReq) error
 	// NewError creates *ErrorStatusCode from error returned by handler.
 	//
 	// Used for common default response.

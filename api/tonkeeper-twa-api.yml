@@ -30,19 +30,19 @@ paths:
         'default':
           $ref: '#/components/responses/Error'
 
-  /tonconnect/subscribe:
+  /account-events/subscribe:
     post:
       description: Subscribe to notifications about events in the TON blockchain for the specified address.
       operationId: subscribeToAccountEvents
       requestBody:
-        $ref: "#/components/requestBodies/SubscriptionRequest"
+        $ref: "#/components/requestBodies/AccountEventsSubscriptionRequest"
       responses:
         '200':
           description: "success"
         'default':
           $ref: '#/components/responses/Error'
 
-  /tonconnect/unsubscribe:
+  /account-events/unsubscribe:
     post:
       description: Unsubscribe from notifications about events in the TON blockchain for the specified address.
       operationId: unsubscribeFromAccountEvents
@@ -54,17 +54,67 @@ paths:
         'default':
           $ref: '#/components/responses/Error'
 
+  /bridge/subscribe:
+    post:
+      description: Subscribe to notifications from the HTTP Bridge regarding a specific smart contract or wallet.
+      operationId: subscribeToBridgeEvents
+      requestBody:
+        $ref: "#/components/requestBodies/BridgeSubscriptionRequest"
+      responses:
+        '200':
+          description: "success"
+        'default':
+          $ref: '#/components/responses/Error'
+
+  /bridge/unsubscribe:
+    post:
+      description: Unsubscribe from bridge notifications.
+      operationId: unsubscribeFromBridgeEvents
+      requestBody:
+        $ref: "#/components/requestBodies/BridgeCancelSubscriptionRequest"
+      responses:
+        '200':
+          description: "success"
+        'default':
+          $ref: '#/components/responses/Error'
+
+  /bridge/webhook/client_id:
+    post:
+      operationId: bridgeWebhook
+      parameters:
+        - $ref: '#/components/parameters/ClientID'
+      requestBody:
+        $ref: "#/components/requestBodies/BridgeWebhook"
+      responses:
+        '200':
+          description: "success"
+        'default':
+          $ref: '#/components/responses/Error'
 components:
   parameters:
-    token:
-      in: header
-      name: X-TonConnect-Auth
+    ClientID:
+      in: path
+      name: client_id
+      required: true
       schema:
         type: string
-        example: NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2ODQ3...
-      required: true
+        example: "YXV0aF9kYXRlPTxhdXRoX2RhdGU"
 
   requestBodies:
+    BridgeCancelSubscriptionRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - twa_init_data
+            properties:
+              twa_init_data:
+                type: string
+                description: "Base64 encoded twa init data"
+                example: "YXV0aF9kYXRlPTxhdXRoX2RhdGU+XG5xdWVyeV9pZD08cXVlcnlfaWQ+XG51c2VyPTx1c2VyPg=="
+
     CancelSubscriptionRequest:
       required: true
       content:
@@ -79,7 +129,7 @@ components:
                 description: "Base64 encoded twa init data"
                 example: "YXV0aF9kYXRlPTxhdXRoX2RhdGU+XG5xdWVyeV9pZD08cXVlcnlfaWQ+XG51c2VyPTx1c2VyPg=="
 
-    SubscriptionRequest:
+    AccountEventsSubscriptionRequest:
       required: true
       content:
         application/json:
@@ -128,6 +178,41 @@ components:
                     example: "84jHVNLQmZsAAAAAZB0Zryi2wqVJI-KaKNXOvCijEi46YyYzkaSHyJrMPBMOkVZa"
                   state_init:
                     type: string
+
+    BridgeSubscriptionRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - twa_init_data
+              - client_id
+            properties:
+              twa_init_data:
+                type: string
+                description: "Base64 encoded twa init data"
+                example: "YXV0aF9kYXRlPTxhdXRoX2RhdGU+XG5xdWVyeV9pZD08cXVlcnlfaWQ+XG51c2VyPTx1c2VyPg=="
+              client_id:
+                type: string
+                example: "97146a46acc2654y27947f14c4a4b14273e954f78bc017790b41208b0043200b"
+
+    BridgeWebhook:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - topic
+              - hash
+            properties:
+              topic:
+                type: string
+                example: "sendTransaction"
+              hash:
+                type: string
+                example: "97146a46acc2654y27947f14c4a4b14273e954f78bc017790b41208b0043200b"
   schemas:
     Error:
       type: object

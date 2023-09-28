@@ -13,22 +13,20 @@ import (
 	tonapiClient "github.com/tonkeeper/opentonapi/client"
 	"github.com/tonkeeper/tongo"
 	"github.com/tonkeeper/tongo/ton"
+	"github.com/tonkeeper/tonkeeper-twa-api/pkg/telegram"
 	"go.uber.org/zap"
 	"golang.org/x/exp/maps"
 )
 
-type TelegramUserID int64
-
-type Notificator struct {
+type AccountEventsNotificator struct {
 	logger  *zap.Logger
 	storage Storage
-	bot     *telegramBot
 
 	client *tonapiClient.Client
 
 	mu               sync.RWMutex
-	subsPerUserID    map[TelegramUserID]map[ton.AccountID]struct{}
-	subsPerAccountID map[ton.AccountID]map[TelegramUserID]struct{}
+	subsPerUserID    map[telegram.UserID]map[ton.AccountID]struct{}
+	subsPerAccountID map[ton.AccountID]map[telegram.UserID]struct{}
 	events           map[string]struct{}
 }
 
@@ -43,35 +41,31 @@ func (c client) Do(r *http.Request) (*http.Response, error) {
 
 var _ ht.Client = &client{}
 
-func NewNotificator(logger *zap.Logger, storage Storage, botSecretKey string, tonapiKey string) (*Notificator, error) {
+func NewNotificator(logger *zap.Logger, storage Storage, tonapiKey string) (*AccountEventsNotificator, error) {
 	cli, err := tonapiClient.NewClient("https://tonapi.io", tonapiClient.WithClient(client{tonapiKey: tonapiKey}))
 	if err != nil {
 		return nil, err
 	}
-	bot, err := newBot(logger, botSecretKey)
-	if err != nil {
-		return nil, err
-	}
-	subscriptions, err := storage.GetSubscriptions(context.TODO())
+	subscriptions, err := storage.GetAccountEventsSubscriptions(context.TODO())
 	if err != nil {
 		return nil, err
 	}
 
-	subsPerUserID := make(map[TelegramUserID]map[ton.AccountID]struct{})
-	subsPerAccountID := make(map[ton.AccountID]map[TelegramUserID]struct{})
+	subsPerUserID := make(map[telegram.UserID]map[ton.AccountID]struct{})
+	subsPerAccountID := make(map[ton.AccountID]map[telegram.UserID]struct{})
 
 	for _, sub := range subscriptions {
 		if _, ok := subsPerUserID[sub.TelegramUserID]; !ok {
 			subsPerUserID[sub.TelegramUserID] = make(map[ton.AccountID]struct{})
 		}
 		if _, ok := subsPerAccountID[sub.Account]; !ok {
-			subsPerAccountID[sub.Account] = make(map[TelegramUserID]struct{})
+			subsPerAccountID[sub.Account] = make(map[telegram.UserID]struct{})
 		}
 		subsPerUserID[sub.TelegramUserID][sub.Account] = struct{}{}
 		subsPerAccountID[sub.Account][sub.TelegramUserID] = struct{}{}
 	}
-	return &Notificator{
-		bot:              bot,
+	return &AccountEventsNotificator{
+		logger:           logger,
 		client:           cli,
 		storage:          storage,
 		subsPerAccountID: subsPerAccountID,
@@ -80,14 +74,14 @@ func NewNotificator(logger *zap.Logger, storage Storage, botSecretKey string, to
 	}, nil
 }
 
-func (n *Notificator) Subscribe(userID TelegramUserID, account ton.Address) error {
-	if err := n.storage.Subscribe(context.TODO(), userID, account); err != nil {
+func (n *AccountEventsNotificator) Subscribe(userID telegram.UserID, account ton.Address) error {
+	if err := n.storage.SubscribeToAccountEvents(context.TODO(), userID, account); err != nil {
 		return err
 	}
 	n.mu.Lock()
 	defer n.mu.Unlock()
 	if _, ok := n.subsPerAccountID[account.ID]; !ok {
-		n.subsPerAccountID[account.ID] = make(map[TelegramUserID]struct{})
+		n.subsPerAccountID[account.ID] = make(map[telegram.UserID]struct{})
 	}
 	n.subsPerAccountID[account.ID][userID] = struct{}{}
 
@@ -106,14 +100,14 @@ type TransactionEventData struct {
 	TxHash    string          `json:"tx_hash"`
 }
 
-func (n *Notificator) isSubscribed(account ton.AccountID) bool {
+func (n *AccountEventsNotificator) isSubscribed(account ton.AccountID) bool {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
 	_, ok := n.subsPerAccountID[account]
 	return ok
 }
 
-func (n *Notificator) unsubscribe(userID TelegramUserID) {
+func (n *AccountEventsNotificator) unsubscribe(userID telegram.UserID) {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 	subs, ok := n.subsPerUserID[userID]
@@ -129,7 +123,7 @@ func (n *Notificator) unsubscribe(userID TelegramUserID) {
 	delete(n.subsPerUserID, userID)
 }
 
-func (n *Notificator) accountSubscribers(account ton.AccountID) []TelegramUserID {
+func (n *AccountEventsNotificator) accountSubscribers(account ton.AccountID) []telegram.UserID {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
 
@@ -140,7 +134,7 @@ func (n *Notificator) accountSubscribers(account ton.AccountID) []TelegramUserID
 	return maps.Keys(subs)
 }
 
-func (n *Notificator) startEventProcessing(eventID string) bool {
+func (n *AccountEventsNotificator) startEventProcessing(eventID string) bool {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 	if _, ok := n.events[eventID]; ok {
@@ -150,13 +144,13 @@ func (n *Notificator) startEventProcessing(eventID string) bool {
 	return true
 }
 
-func (n *Notificator) stopEventProcessing(eventID string) {
+func (n *AccountEventsNotificator) stopEventProcessing(eventID string) {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 	delete(n.events, eventID)
 }
 
-func (n *Notificator) notify(hash string, messageCh chan Message) {
+func (n *AccountEventsNotificator) notify(hash string, messageCh chan<- telegram.Message) {
 	event, err := n.client.GetEvent(context.TODO(), tonapiClient.GetEventParams{EventID: hash})
 	if err != nil {
 		panic(err)
@@ -182,7 +176,7 @@ func (n *Notificator) notify(hash string, messageCh chan Message) {
 			}
 			subscribers := n.accountSubscribers(addr.ID)
 			for _, userID := range subscribers {
-				messageCh <- Message{
+				messageCh <- telegram.Message{
 					UserID: userID,
 					Text:   fmt.Sprintf("%v", action.SimplePreview.Description),
 				}
@@ -191,8 +185,7 @@ func (n *Notificator) notify(hash string, messageCh chan Message) {
 	}
 }
 
-func (n *Notificator) Run(ctx context.Context) {
-	messageCh := n.bot.Run(ctx)
+func (n *AccountEventsNotificator) Run(ctx context.Context, messageCh chan<- telegram.Message) {
 	for {
 		sseClient := sse.NewClient("https://tonapi.io/v2/sse/accounts/transactions?accounts=ALL")
 		err := sseClient.SubscribeWithContext(ctx, "", func(msg *sse.Event) {
@@ -220,8 +213,8 @@ func (n *Notificator) Run(ctx context.Context) {
 	}
 }
 
-func (n *Notificator) Unsubscribe(userID TelegramUserID) error {
-	if err := n.storage.Unsubscribe(context.TODO(), userID); err != nil {
+func (n *AccountEventsNotificator) Unsubscribe(userID telegram.UserID) error {
+	if err := n.storage.UnsubscribeAccountEvents(context.TODO(), userID); err != nil {
 		return err
 	}
 	n.unsubscribe(userID)

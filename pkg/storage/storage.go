@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/tonkeeper/tongo/ton"
 	"github.com/tonkeeper/tonkeeper-twa-api/pkg/core"
+	"github.com/tonkeeper/tonkeeper-twa-api/pkg/telegram"
 	"go.uber.org/zap"
 )
 
@@ -38,12 +39,12 @@ func (s *storage) Pool() *pgxpool.Pool {
 	return s.pool
 }
 
-func (s *storage) Subscribe(ctx context.Context, userID core.TelegramUserID, addr ton.Address) error {
+func (s *storage) SubscribeToAccountEvents(ctx context.Context, userID telegram.UserID, addr ton.Address) error {
 	_, err := s.pool.Exec(ctx, "INSERT INTO twa.subscriptions (telegram_user_id, account) VALUES ($1, $2) ON CONFLICT DO NOTHING", userID, addr.ID.ToRaw())
 	return err
 }
 
-func (s *storage) GetSubscriptions(ctx context.Context) ([]core.Subscription, error) {
+func (s *storage) GetAccountEventsSubscriptions(ctx context.Context) ([]core.Subscription, error) {
 	rows, err := s.pool.Query(ctx, "SELECT telegram_user_id, account FROM twa.subscriptions")
 	if err != nil {
 		return nil, err
@@ -67,7 +68,7 @@ func (s *storage) GetSubscriptions(ctx context.Context) ([]core.Subscription, er
 	return result, nil
 }
 
-func (s *storage) Unsubscribe(ctx context.Context, userID core.TelegramUserID) error {
+func (s *storage) UnsubscribeAccountEvents(ctx context.Context, userID telegram.UserID) error {
 	_, err := s.pool.Exec(ctx, "DELETE FROM twa.subscriptions WHERE telegram_user_id = $1", userID)
 	return err
 }

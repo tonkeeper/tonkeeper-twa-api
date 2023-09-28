@@ -22,6 +22,10 @@ import (
 
 // Invoker invokes operations described by OpenAPI v3 specification.
 type Invoker interface {
+	// BridgeWebhook invokes bridgeWebhook operation.
+	//
+	// POST /bridge/webhook/client_id
+	BridgeWebhook(ctx context.Context, request *BridgeWebhookReq, params BridgeWebhookParams) error
 	// GetTonConnectPayload invokes getTonConnectPayload operation.
 	//
 	// Get a challenge for TON Connect.
@@ -32,14 +36,26 @@ type Invoker interface {
 	//
 	// Subscribe to notifications about events in the TON blockchain for the specified address.
 	//
-	// POST /tonconnect/subscribe
+	// POST /account-events/subscribe
 	SubscribeToAccountEvents(ctx context.Context, request *SubscribeToAccountEventsReq) error
+	// SubscribeToBridgeEvents invokes subscribeToBridgeEvents operation.
+	//
+	// Subscribe to notifications from the HTTP Bridge regarding a specific smart contract or wallet.
+	//
+	// POST /bridge/subscribe
+	SubscribeToBridgeEvents(ctx context.Context, request *SubscribeToBridgeEventsReq) error
 	// UnsubscribeFromAccountEvents invokes unsubscribeFromAccountEvents operation.
 	//
 	// Unsubscribe from notifications about events in the TON blockchain for the specified address.
 	//
-	// POST /tonconnect/unsubscribe
+	// POST /account-events/unsubscribe
 	UnsubscribeFromAccountEvents(ctx context.Context, request *UnsubscribeFromAccountEventsReq) error
+	// UnsubscribeFromBridgeEvents invokes unsubscribeFromBridgeEvents operation.
+	//
+	// Unsubscribe from bridge notifications.
+	//
+	// POST /bridge/unsubscribe
+	UnsubscribeFromBridgeEvents(ctx context.Context, request *UnsubscribeFromBridgeEventsReq) error
 }
 
 // Client implements OAS client.
@@ -92,6 +108,80 @@ func (c *Client) requestURL(ctx context.Context) *url.URL {
 		return c.serverURL
 	}
 	return u
+}
+
+// BridgeWebhook invokes bridgeWebhook operation.
+//
+// POST /bridge/webhook/client_id
+func (c *Client) BridgeWebhook(ctx context.Context, request *BridgeWebhookReq, params BridgeWebhookParams) error {
+	res, err := c.sendBridgeWebhook(ctx, request, params)
+	_ = res
+	return err
+}
+
+func (c *Client) sendBridgeWebhook(ctx context.Context, request *BridgeWebhookReq, params BridgeWebhookParams) (res *BridgeWebhookOK, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("bridgeWebhook"),
+		semconv.HTTPMethodKey.String("POST"),
+		semconv.HTTPRouteKey.String("/bridge/webhook/client_id"),
+	}
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, "BridgeWebhook",
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/bridge/webhook/client_id"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeBridgeWebhookRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	defer resp.Body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeBridgeWebhookResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
 }
 
 // GetTonConnectPayload invokes getTonConnectPayload operation.
@@ -171,7 +261,7 @@ func (c *Client) sendGetTonConnectPayload(ctx context.Context) (res *GetTonConne
 //
 // Subscribe to notifications about events in the TON blockchain for the specified address.
 //
-// POST /tonconnect/subscribe
+// POST /account-events/subscribe
 func (c *Client) SubscribeToAccountEvents(ctx context.Context, request *SubscribeToAccountEventsReq) error {
 	res, err := c.sendSubscribeToAccountEvents(ctx, request)
 	_ = res
@@ -182,7 +272,7 @@ func (c *Client) sendSubscribeToAccountEvents(ctx context.Context, request *Subs
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("subscribeToAccountEvents"),
 		semconv.HTTPMethodKey.String("POST"),
-		semconv.HTTPRouteKey.String("/tonconnect/subscribe"),
+		semconv.HTTPRouteKey.String("/account-events/subscribe"),
 	}
 
 	// Run stopwatch.
@@ -215,7 +305,7 @@ func (c *Client) sendSubscribeToAccountEvents(ctx context.Context, request *Subs
 	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [1]string
-	pathParts[0] = "/tonconnect/subscribe"
+	pathParts[0] = "/account-events/subscribe"
 	uri.AddPathParts(u, pathParts[:]...)
 
 	stage = "EncodeRequest"
@@ -243,11 +333,87 @@ func (c *Client) sendSubscribeToAccountEvents(ctx context.Context, request *Subs
 	return result, nil
 }
 
+// SubscribeToBridgeEvents invokes subscribeToBridgeEvents operation.
+//
+// Subscribe to notifications from the HTTP Bridge regarding a specific smart contract or wallet.
+//
+// POST /bridge/subscribe
+func (c *Client) SubscribeToBridgeEvents(ctx context.Context, request *SubscribeToBridgeEventsReq) error {
+	res, err := c.sendSubscribeToBridgeEvents(ctx, request)
+	_ = res
+	return err
+}
+
+func (c *Client) sendSubscribeToBridgeEvents(ctx context.Context, request *SubscribeToBridgeEventsReq) (res *SubscribeToBridgeEventsOK, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("subscribeToBridgeEvents"),
+		semconv.HTTPMethodKey.String("POST"),
+		semconv.HTTPRouteKey.String("/bridge/subscribe"),
+	}
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, "SubscribeToBridgeEvents",
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/bridge/subscribe"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeSubscribeToBridgeEventsRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	defer resp.Body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeSubscribeToBridgeEventsResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // UnsubscribeFromAccountEvents invokes unsubscribeFromAccountEvents operation.
 //
 // Unsubscribe from notifications about events in the TON blockchain for the specified address.
 //
-// POST /tonconnect/unsubscribe
+// POST /account-events/unsubscribe
 func (c *Client) UnsubscribeFromAccountEvents(ctx context.Context, request *UnsubscribeFromAccountEventsReq) error {
 	res, err := c.sendUnsubscribeFromAccountEvents(ctx, request)
 	_ = res
@@ -258,7 +424,7 @@ func (c *Client) sendUnsubscribeFromAccountEvents(ctx context.Context, request *
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("unsubscribeFromAccountEvents"),
 		semconv.HTTPMethodKey.String("POST"),
-		semconv.HTTPRouteKey.String("/tonconnect/unsubscribe"),
+		semconv.HTTPRouteKey.String("/account-events/unsubscribe"),
 	}
 
 	// Run stopwatch.
@@ -291,7 +457,7 @@ func (c *Client) sendUnsubscribeFromAccountEvents(ctx context.Context, request *
 	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [1]string
-	pathParts[0] = "/tonconnect/unsubscribe"
+	pathParts[0] = "/account-events/unsubscribe"
 	uri.AddPathParts(u, pathParts[:]...)
 
 	stage = "EncodeRequest"
@@ -312,6 +478,82 @@ func (c *Client) sendUnsubscribeFromAccountEvents(ctx context.Context, request *
 
 	stage = "DecodeResponse"
 	result, err := decodeUnsubscribeFromAccountEventsResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// UnsubscribeFromBridgeEvents invokes unsubscribeFromBridgeEvents operation.
+//
+// Unsubscribe from bridge notifications.
+//
+// POST /bridge/unsubscribe
+func (c *Client) UnsubscribeFromBridgeEvents(ctx context.Context, request *UnsubscribeFromBridgeEventsReq) error {
+	res, err := c.sendUnsubscribeFromBridgeEvents(ctx, request)
+	_ = res
+	return err
+}
+
+func (c *Client) sendUnsubscribeFromBridgeEvents(ctx context.Context, request *UnsubscribeFromBridgeEventsReq) (res *UnsubscribeFromBridgeEventsOK, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("unsubscribeFromBridgeEvents"),
+		semconv.HTTPMethodKey.String("POST"),
+		semconv.HTTPRouteKey.String("/bridge/unsubscribe"),
+	}
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, "UnsubscribeFromBridgeEvents",
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/bridge/unsubscribe"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeUnsubscribeFromBridgeEventsRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	defer resp.Body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeUnsubscribeFromBridgeEventsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

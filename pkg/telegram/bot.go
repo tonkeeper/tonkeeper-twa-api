@@ -1,31 +1,33 @@
-package core
+package telegram
 
 import (
 	"context"
 
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"go.uber.org/zap"
 )
 
-type telegramBot struct {
+type UserID int64
+
+type bot struct {
 	logger *zap.Logger
 	bot    *tgbotapi.BotAPI
 }
 
-func newBot(logger *zap.Logger, botSecretKey string) (*telegramBot, error) {
-	bot, err := tgbotapi.NewBotAPI(botSecretKey)
+func NewBot(logger *zap.Logger, botSecretKey string) (*bot, error) {
+	tgbot, err := tgbotapi.NewBotAPI(botSecretKey)
 	if err != nil {
 		return nil, err
 	}
-	return &telegramBot{logger: logger, bot: bot}, nil
+	return &bot{logger: logger, bot: tgbot}, nil
 }
 
 type Message struct {
-	UserID TelegramUserID
+	UserID UserID
 	Text   string
 }
 
-func (b *telegramBot) Run(ctx context.Context) chan Message {
+func (b *bot) Run(ctx context.Context) chan Message {
 	ch := make(chan Message)
 	go func() {
 		for {

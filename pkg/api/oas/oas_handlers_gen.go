@@ -20,6 +20,135 @@ import (
 	"github.com/ogen-go/ogen/otelogen"
 )
 
+// handleBridgeWebhookRequest handles bridgeWebhook operation.
+//
+// POST /bridge/webhook/client_id
+func (s *Server) handleBridgeWebhookRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("bridgeWebhook"),
+		semconv.HTTPMethodKey.String("POST"),
+		semconv.HTTPRouteKey.String("/bridge/webhook/client_id"),
+	}
+
+	// Start a span for this request.
+	ctx, span := s.cfg.Tracer.Start(r.Context(), "BridgeWebhook",
+		trace.WithAttributes(otelAttrs...),
+		serverSpanKind,
+	)
+	defer span.End()
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		elapsedDuration := time.Since(startTime)
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	s.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	var (
+		recordError = func(stage string, err error) {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			s.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: "BridgeWebhook",
+			ID:   "bridgeWebhook",
+		}
+	)
+	params, err := decodeBridgeWebhookParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+	request, close, err := s.decodeBridgeWebhookRequest(r)
+	if err != nil {
+		err = &ogenerrors.DecodeRequestError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		recordError("DecodeRequest", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+	defer func() {
+		if err := close(); err != nil {
+			recordError("CloseRequest", err)
+		}
+	}()
+
+	var response *BridgeWebhookOK
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:       ctx,
+			OperationName: "BridgeWebhook",
+			OperationID:   "bridgeWebhook",
+			Body:          request,
+			Params: middleware.Parameters{
+				{
+					Name: "client_id",
+					In:   "path",
+				}: params.ClientID,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = *BridgeWebhookReq
+			Params   = BridgeWebhookParams
+			Response = *BridgeWebhookOK
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackBridgeWebhookParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				err = s.h.BridgeWebhook(ctx, request, params)
+				return response, err
+			},
+		)
+	} else {
+		err = s.h.BridgeWebhook(ctx, request, params)
+	}
+	if err != nil {
+		if errRes, ok := errors.Into[*ErrorStatusCode](err); ok {
+			if err := encodeErrorResponse(errRes, w, span); err != nil {
+				recordError("Internal", err)
+			}
+			return
+		}
+		if errors.Is(err, ht.ErrNotImplemented) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+		if err := encodeErrorResponse(s.h.NewError(ctx, err), w, span); err != nil {
+			recordError("Internal", err)
+		}
+		return
+	}
+
+	if err := encodeBridgeWebhookResponse(response, w, span); err != nil {
+		recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
 // handleGetTonConnectPayloadRequest handles getTonConnectPayload operation.
 //
 // Get a challenge for TON Connect.
@@ -121,12 +250,12 @@ func (s *Server) handleGetTonConnectPayloadRequest(args [0]string, argsEscaped b
 //
 // Subscribe to notifications about events in the TON blockchain for the specified address.
 //
-// POST /tonconnect/subscribe
+// POST /account-events/subscribe
 func (s *Server) handleSubscribeToAccountEventsRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("subscribeToAccountEvents"),
 		semconv.HTTPMethodKey.String("POST"),
-		semconv.HTTPRouteKey.String("/tonconnect/subscribe"),
+		semconv.HTTPRouteKey.String("/account-events/subscribe"),
 	}
 
 	// Start a span for this request.
@@ -233,16 +362,132 @@ func (s *Server) handleSubscribeToAccountEventsRequest(args [0]string, argsEscap
 	}
 }
 
+// handleSubscribeToBridgeEventsRequest handles subscribeToBridgeEvents operation.
+//
+// Subscribe to notifications from the HTTP Bridge regarding a specific smart contract or wallet.
+//
+// POST /bridge/subscribe
+func (s *Server) handleSubscribeToBridgeEventsRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("subscribeToBridgeEvents"),
+		semconv.HTTPMethodKey.String("POST"),
+		semconv.HTTPRouteKey.String("/bridge/subscribe"),
+	}
+
+	// Start a span for this request.
+	ctx, span := s.cfg.Tracer.Start(r.Context(), "SubscribeToBridgeEvents",
+		trace.WithAttributes(otelAttrs...),
+		serverSpanKind,
+	)
+	defer span.End()
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		elapsedDuration := time.Since(startTime)
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	s.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	var (
+		recordError = func(stage string, err error) {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			s.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: "SubscribeToBridgeEvents",
+			ID:   "subscribeToBridgeEvents",
+		}
+	)
+	request, close, err := s.decodeSubscribeToBridgeEventsRequest(r)
+	if err != nil {
+		err = &ogenerrors.DecodeRequestError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		recordError("DecodeRequest", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+	defer func() {
+		if err := close(); err != nil {
+			recordError("CloseRequest", err)
+		}
+	}()
+
+	var response *SubscribeToBridgeEventsOK
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:       ctx,
+			OperationName: "SubscribeToBridgeEvents",
+			OperationID:   "subscribeToBridgeEvents",
+			Body:          request,
+			Params:        middleware.Parameters{},
+			Raw:           r,
+		}
+
+		type (
+			Request  = *SubscribeToBridgeEventsReq
+			Params   = struct{}
+			Response = *SubscribeToBridgeEventsOK
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			nil,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				err = s.h.SubscribeToBridgeEvents(ctx, request)
+				return response, err
+			},
+		)
+	} else {
+		err = s.h.SubscribeToBridgeEvents(ctx, request)
+	}
+	if err != nil {
+		if errRes, ok := errors.Into[*ErrorStatusCode](err); ok {
+			if err := encodeErrorResponse(errRes, w, span); err != nil {
+				recordError("Internal", err)
+			}
+			return
+		}
+		if errors.Is(err, ht.ErrNotImplemented) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+		if err := encodeErrorResponse(s.h.NewError(ctx, err), w, span); err != nil {
+			recordError("Internal", err)
+		}
+		return
+	}
+
+	if err := encodeSubscribeToBridgeEventsResponse(response, w, span); err != nil {
+		recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
 // handleUnsubscribeFromAccountEventsRequest handles unsubscribeFromAccountEvents operation.
 //
 // Unsubscribe from notifications about events in the TON blockchain for the specified address.
 //
-// POST /tonconnect/unsubscribe
+// POST /account-events/unsubscribe
 func (s *Server) handleUnsubscribeFromAccountEventsRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("unsubscribeFromAccountEvents"),
 		semconv.HTTPMethodKey.String("POST"),
-		semconv.HTTPRouteKey.String("/tonconnect/unsubscribe"),
+		semconv.HTTPRouteKey.String("/account-events/unsubscribe"),
 	}
 
 	// Start a span for this request.
@@ -341,6 +586,122 @@ func (s *Server) handleUnsubscribeFromAccountEventsRequest(args [0]string, argsE
 	}
 
 	if err := encodeUnsubscribeFromAccountEventsResponse(response, w, span); err != nil {
+		recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
+// handleUnsubscribeFromBridgeEventsRequest handles unsubscribeFromBridgeEvents operation.
+//
+// Unsubscribe from bridge notifications.
+//
+// POST /bridge/unsubscribe
+func (s *Server) handleUnsubscribeFromBridgeEventsRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("unsubscribeFromBridgeEvents"),
+		semconv.HTTPMethodKey.String("POST"),
+		semconv.HTTPRouteKey.String("/bridge/unsubscribe"),
+	}
+
+	// Start a span for this request.
+	ctx, span := s.cfg.Tracer.Start(r.Context(), "UnsubscribeFromBridgeEvents",
+		trace.WithAttributes(otelAttrs...),
+		serverSpanKind,
+	)
+	defer span.End()
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		elapsedDuration := time.Since(startTime)
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	s.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	var (
+		recordError = func(stage string, err error) {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			s.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: "UnsubscribeFromBridgeEvents",
+			ID:   "unsubscribeFromBridgeEvents",
+		}
+	)
+	request, close, err := s.decodeUnsubscribeFromBridgeEventsRequest(r)
+	if err != nil {
+		err = &ogenerrors.DecodeRequestError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		recordError("DecodeRequest", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+	defer func() {
+		if err := close(); err != nil {
+			recordError("CloseRequest", err)
+		}
+	}()
+
+	var response *UnsubscribeFromBridgeEventsOK
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:       ctx,
+			OperationName: "UnsubscribeFromBridgeEvents",
+			OperationID:   "unsubscribeFromBridgeEvents",
+			Body:          request,
+			Params:        middleware.Parameters{},
+			Raw:           r,
+		}
+
+		type (
+			Request  = *UnsubscribeFromBridgeEventsReq
+			Params   = struct{}
+			Response = *UnsubscribeFromBridgeEventsOK
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			nil,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				err = s.h.UnsubscribeFromBridgeEvents(ctx, request)
+				return response, err
+			},
+		)
+	} else {
+		err = s.h.UnsubscribeFromBridgeEvents(ctx, request)
+	}
+	if err != nil {
+		if errRes, ok := errors.Into[*ErrorStatusCode](err); ok {
+			if err := encodeErrorResponse(errRes, w, span); err != nil {
+				recordError("Internal", err)
+			}
+			return
+		}
+		if errors.Is(err, ht.ErrNotImplemented) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+		if err := encodeErrorResponse(s.h.NewError(ctx, err), w, span); err != nil {
+			recordError("Internal", err)
+		}
+		return
+	}
+
+	if err := encodeUnsubscribeFromBridgeEventsResponse(response, w, span); err != nil {
 		recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)
