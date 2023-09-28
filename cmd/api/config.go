@@ -12,7 +12,7 @@ type Config struct {
 		Port int `env:"PORT" envDefault:"7077"`
 	}
 	App struct {
-		LogLevel    string `env:"LOG_LEVEL" envDefault:"ERROR"`
+		LogLevel    string `env:"LOG_LEVEL" envDefault:"INFO"`
 		PostgresURI string `env:"POSTGRES_URI,required"`
 	}
 	TonAPI struct {
