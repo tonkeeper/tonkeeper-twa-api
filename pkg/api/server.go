@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/rs/cors"
 	"go.uber.org/zap"
 
 	"github.com/tonkeeper/tonkeeper-twa-api/pkg/api/oas"
@@ -13,7 +14,6 @@ import (
 type Server struct {
 	logger     *zap.Logger
 	httpServer *http.Server
-	mux        *http.ServeMux
 }
 
 type ServerOptions struct {
@@ -36,10 +36,9 @@ func NewServer(log *zap.Logger, pool *pgxpool.Pool, handler *Handler, address st
 
 	serv := Server{
 		logger: log,
-		mux:    mux,
 		httpServer: &http.Server{
 			Addr:    address,
-			Handler: mux,
+			Handler: cors.Default().Handler(mux),
 		},
 	}
 	return &serv, nil

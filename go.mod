@@ -12,6 +12,7 @@ require (
 	github.com/jackc/pgx/v4 v4.18.1
 	github.com/ogen-go/ogen v0.75.0
 	github.com/r3labs/sse/v2 v2.10.0
+	github.com/rs/cors v1.10.0
 	github.com/tonkeeper/opentonapi v1.0.1-0.20230927063627-355a22c175b5
 	github.com/tonkeeper/tongo v1.2.3-0.20230913212511-9b46bf078ec1
 	go.opentelemetry.io/otel v1.18.0
