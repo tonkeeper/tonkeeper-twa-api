@@ -21,9 +21,9 @@ func MigrateDb(postgresURI string) error {
 	}
 	_, err = db.Exec("create schema if not exists twa")
 	if err != nil {
-		return fmt.Errorf("failed to create 'battery' schema: %w", err)
+		return fmt.Errorf("failed to create 'twa' schema: %w", err)
 	}
-	databaseInstance, err := postgres.WithInstance(db, &postgres.Config{SchemaName: "battery"})
+	databaseInstance, err := postgres.WithInstance(db, &postgres.Config{SchemaName: "twa"})
 	if err != nil {
 		return fmt.Errorf("failed to init database instance: %w", err)
 	}
