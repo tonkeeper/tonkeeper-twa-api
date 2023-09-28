@@ -8,7 +8,7 @@ info:
     email: support@tonkeeper.com
 servers:
   - url: "https://twa-api.tonkeeper.com"
-  - url: "https://test-twa-api.tonkeeper.com"
+  - url: "https://twa-api-dev.tonkeeper.com"
 paths:
   /tonconnect/payload:
     get:
