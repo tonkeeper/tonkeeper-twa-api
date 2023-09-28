@@ -30,7 +30,7 @@ func NewBridge(logger *zap.Logger, messageCh chan<- telegram.Message) *Bridge {
 	}
 }
 
-func (r *Bridge) Subscribe(userID telegram.UserID, clientID ClientID) error {
+func (r *Bridge) Subscribe(userID telegram.UserID, clientID ClientID, origin string) error {
 	// TODO: save to the database
 	r.subscribe(userID, clientID)
 	return nil

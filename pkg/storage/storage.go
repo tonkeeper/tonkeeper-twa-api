@@ -44,16 +44,16 @@ func (s *storage) SubscribeToAccountEvents(ctx context.Context, userID telegram.
 	return err
 }
 
-func (s *storage) GetAccountEventsSubscriptions(ctx context.Context) ([]core.Subscription, error) {
+func (s *storage) GetAccountEventsSubscriptions(ctx context.Context) ([]core.AccountEventsSubscription, error) {
 	rows, err := s.pool.Query(ctx, "SELECT telegram_user_id, account FROM twa.subscriptions")
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var result []core.Subscription
+	var result []core.AccountEventsSubscription
 	for rows.Next() {
-		var sub core.Subscription
+		var sub core.AccountEventsSubscription
 		var accountID string
 		if err := rows.Scan(&sub.TelegramUserID, &accountID); err != nil {
 			return nil, err

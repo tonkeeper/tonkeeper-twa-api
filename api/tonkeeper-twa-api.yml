@@ -188,6 +188,7 @@ components:
             required:
               - twa_init_data
               - client_id
+              - origin
             properties:
               twa_init_data:
                 type: string
@@ -196,6 +197,8 @@ components:
               client_id:
                 type: string
                 example: "97146a46acc2654y27947f14c4a4b14273e954f78bc017790b41208b0043200b"
+              origin:
+                type: string
 
     BridgeWebhook:
       required: true

@@ -113,7 +113,7 @@ func (h *Handler) SubscribeToBridgeEvents(ctx context.Context, req *oas.Subscrib
 	if err != nil {
 		return BadRequest(err.Error())
 	}
-	if err := h.bridge.Subscribe(userID, core.ClientID(req.ClientID)); err != nil {
+	if err := h.bridge.Subscribe(userID, core.ClientID(req.ClientID), req.Origin); err != nil {
 		return InternalError(err)
 	}
 	return nil

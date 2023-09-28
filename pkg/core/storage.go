@@ -7,13 +7,13 @@ import (
 	"github.com/tonkeeper/tonkeeper-twa-api/pkg/telegram"
 )
 
-type Subscription struct {
+type AccountEventsSubscription struct {
 	TelegramUserID telegram.UserID
 	Account        ton.AccountID
 }
 
 type Storage interface {
 	SubscribeToAccountEvents(ctx context.Context, userID telegram.UserID, account ton.Address) error
-	GetAccountEventsSubscriptions(ctx context.Context) ([]Subscription, error)
+	GetAccountEventsSubscriptions(ctx context.Context) ([]AccountEventsSubscription, error)
 	UnsubscribeAccountEvents(ctx context.Context, userID telegram.UserID) error
 }

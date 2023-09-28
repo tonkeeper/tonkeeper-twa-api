@@ -317,6 +317,7 @@ type SubscribeToBridgeEventsReq struct {
 	// Base64 encoded twa init data.
 	TwaInitData string `json:"twa_init_data"`
 	ClientID    string `json:"client_id"`
+	Origin      string `json:"origin"`
 }
 
 // GetTwaInitData returns the value of TwaInitData.
@@ -329,6 +330,11 @@ func (s *SubscribeToBridgeEventsReq) GetClientID() string {
 	return s.ClientID
 }
 
+// GetOrigin returns the value of Origin.
+func (s *SubscribeToBridgeEventsReq) GetOrigin() string {
+	return s.Origin
+}
+
 // SetTwaInitData sets the value of TwaInitData.
 func (s *SubscribeToBridgeEventsReq) SetTwaInitData(val string) {
 	s.TwaInitData = val
@@ -337,6 +343,11 @@ func (s *SubscribeToBridgeEventsReq) SetTwaInitData(val string) {
 // SetClientID sets the value of ClientID.
 func (s *SubscribeToBridgeEventsReq) SetClientID(val string) {
 	s.ClientID = val
+}
+
+// SetOrigin sets the value of Origin.
+func (s *SubscribeToBridgeEventsReq) SetOrigin(val string) {
+	s.Origin = val
 }
 
 // UnsubscribeFromAccountEventsOK is response for UnsubscribeFromAccountEvents operation.

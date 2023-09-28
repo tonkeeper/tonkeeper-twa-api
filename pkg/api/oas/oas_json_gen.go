@@ -807,11 +807,16 @@ func (s *SubscribeToBridgeEventsReq) encodeFields(e *jx.Encoder) {
 		e.FieldStart("client_id")
 		e.Str(s.ClientID)
 	}
+	{
+		e.FieldStart("origin")
+		e.Str(s.Origin)
+	}
 }
 
-var jsonFieldsNameOfSubscribeToBridgeEventsReq = [2]string{
+var jsonFieldsNameOfSubscribeToBridgeEventsReq = [3]string{
 	0: "twa_init_data",
 	1: "client_id",
+	2: "origin",
 }
 
 // Decode decodes SubscribeToBridgeEventsReq from json.
@@ -847,6 +852,18 @@ func (s *SubscribeToBridgeEventsReq) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"client_id\"")
 			}
+		case "origin":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				v, err := d.Str()
+				s.Origin = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"origin\"")
+			}
 		default:
 			return d.Skip()
 		}
@@ -857,7 +874,7 @@ func (s *SubscribeToBridgeEventsReq) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00000011,
+		0b00000111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
