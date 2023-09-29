@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/tonkeeper/tonkeeper-twa-api/pkg/telegram"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
@@ -12,6 +11,7 @@ import (
 	"github.com/tonkeeper/tonkeeper-twa-api/pkg/core"
 	"github.com/tonkeeper/tonkeeper-twa-api/pkg/storage"
 	"github.com/tonkeeper/tonkeeper-twa-api/pkg/storage/migrations"
+	"github.com/tonkeeper/tonkeeper-twa-api/pkg/telegram"
 )
 
 func createLogger(level string) (*zap.Logger, error) {
@@ -55,7 +55,7 @@ func main() {
 
 	go notificator.Run(context.TODO(), messageCh)
 
-	bridge := core.NewBridge(logger, messageCh)
+	bridge := core.NewBridge(logger, s, messageCh)
 
 	handler, err := api.NewHandler(logger, notificator, bridge, config)
 	if err != nil {

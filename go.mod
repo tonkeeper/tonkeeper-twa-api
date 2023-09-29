@@ -13,6 +13,7 @@ require (
 	github.com/ogen-go/ogen v0.75.0
 	github.com/r3labs/sse/v2 v2.10.0
 	github.com/rs/cors v1.10.0
+	github.com/stretchr/testify v1.8.4
 	github.com/tonkeeper/opentonapi v1.0.1-0.20230927063627-355a22c175b5
 	github.com/tonkeeper/tongo v1.2.3-0.20230913212511-9b46bf078ec1
 	go.opentelemetry.io/otel v1.18.0
@@ -24,6 +25,7 @@ require (
 )
 
 require (
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dlclark/regexp2 v1.10.0 // indirect
 	github.com/fatih/color v1.15.0 // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
@@ -45,6 +47,7 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.19 // indirect
 	github.com/oasisprotocol/curve25519-voi v0.0.0-20220328075252-7dd334e3daae // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
 	github.com/snksoft/crc v1.1.0 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
@@ -57,4 +60,5 @@ require (
 	golang.org/x/tools v0.13.0 // indirect
 	gopkg.in/cenkalti/backoff.v1 v1.1.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

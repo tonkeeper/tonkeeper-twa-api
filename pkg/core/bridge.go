@@ -1,91 +1,121 @@
 package core
 
 import (
+	"context"
 	"fmt"
 	"sync"
 
 	"github.com/tonkeeper/tonkeeper-twa-api/pkg/telegram"
 	"go.uber.org/zap"
-	"golang.org/x/exp/maps"
 )
 
 type ClientID string
 
+type bridgeSubscription struct {
+	Origin string
+	UserID telegram.UserID
+}
+
 type Bridge struct {
 	logger *zap.Logger
 
+	storage   Storage
 	messageCh chan<- telegram.Message
 
-	mu              sync.RWMutex
-	subsPerClientID map[ClientID]map[telegram.UserID]struct{}
-	subsPerUserID   map[telegram.UserID]map[ClientID]struct{}
+	mu               sync.RWMutex
+	subsPerClientID  map[ClientID]bridgeSubscription
+	clientIDsPerUser map[telegram.UserID]map[ClientID]struct{}
 }
 
-func NewBridge(logger *zap.Logger, messageCh chan<- telegram.Message) *Bridge {
+func NewBridge(logger *zap.Logger, storage Storage, messageCh chan<- telegram.Message) *Bridge {
 	return &Bridge{
-		logger:          logger,
-		messageCh:       messageCh,
-		subsPerUserID:   map[telegram.UserID]map[ClientID]struct{}{},
-		subsPerClientID: map[ClientID]map[telegram.UserID]struct{}{},
+		logger:           logger,
+		storage:          storage,
+		messageCh:        messageCh,
+		subsPerClientID:  map[ClientID]bridgeSubscription{},
+		clientIDsPerUser: map[telegram.UserID]map[ClientID]struct{}{},
 	}
 }
 
-func (r *Bridge) Subscribe(userID telegram.UserID, clientID ClientID, origin string) error {
-	// TODO: save to the database
-	r.subscribe(userID, clientID)
+// HandleWebhook is called by the HTTP Bridge when it receives a new event.
+func (b *Bridge) HandleWebhook(clientID ClientID, topic string, hash string) {
+	subscription, ok := b.subscription(clientID)
+	if !ok {
+		return
+	}
+	b.messageCh <- telegram.Message{
+		UserID: subscription.UserID,
+		Text:   fmt.Sprintf("New event: %s from %v", topic, subscription.Origin),
+	}
+}
+
+func (b *Bridge) Subscribe(userID telegram.UserID, clientID ClientID, origin string) error {
+	if err := b.storage.SubscribeToBridgeEvents(context.TODO(), userID, clientID, origin); err != nil {
+		return err
+	}
+	b.subscribe(userID, clientID, origin)
 	return nil
 }
 
-func (r *Bridge) subscribe(userID telegram.UserID, clientID ClientID) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	if _, ok := r.subsPerUserID[userID]; !ok {
-		r.subsPerUserID[userID] = make(map[ClientID]struct{}, 1)
+func (b *Bridge) Unsubscribe(userID telegram.UserID, clientID *ClientID) error {
+	if err := b.storage.UnsubscribeFromBridgeEvents(context.TODO(), userID, clientID); err != nil {
+		return err
 	}
-	if _, ok := r.subsPerClientID[clientID]; !ok {
-		r.subsPerClientID[clientID] = make(map[telegram.UserID]struct{}, 1)
+	if clientID == nil {
+		b.cancelUserSubscriptions(userID)
+	} else {
+		b.cancelSpecificSubscription(userID, *clientID)
 	}
-	r.subsPerUserID[userID][clientID] = struct{}{}
-	r.subsPerClientID[clientID][userID] = struct{}{}
+	return nil
 }
 
-func (r *Bridge) unsubscribe(userID telegram.UserID) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+func (b *Bridge) subscribe(userID telegram.UserID, clientID ClientID, origin string) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
 
-	clientIDs, ok := r.subsPerUserID[userID]
+	if _, ok := b.clientIDsPerUser[userID]; !ok {
+		b.clientIDsPerUser[userID] = make(map[ClientID]struct{}, 1)
+	}
+	b.clientIDsPerUser[userID][clientID] = struct{}{}
+
+	b.subsPerClientID[clientID] = bridgeSubscription{
+		Origin: origin,
+		UserID: userID,
+	}
+}
+
+func (b *Bridge) cancelUserSubscriptions(userID telegram.UserID) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	clientIDs, ok := b.clientIDsPerUser[userID]
 	if !ok {
 		return
 	}
 	for clientID := range clientIDs {
-		delete(r.subsPerClientID[clientID], userID)
+		delete(b.subsPerClientID, clientID)
 	}
-	delete(r.subsPerUserID, userID)
+	delete(b.clientIDsPerUser, userID)
 }
 
-func (r *Bridge) subscriptions(clientID ClientID) []telegram.UserID {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	userIDs, ok := r.subsPerClientID[clientID]
-	if !ok {
-		return nil
-	}
-	return maps.Keys(userIDs)
-}
+func (b *Bridge) cancelSpecificSubscription(userID telegram.UserID, clientID ClientID) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
 
-func (r *Bridge) HandleWebhook(clientID ClientID, topic string, hash string) {
-	userIDs := r.subscriptions(clientID)
-	for _, userID := range userIDs {
-		r.messageCh <- telegram.Message{
-			UserID: userID,
-			Text:   fmt.Sprintf("New event: %s", topic),
-		}
+	delete(b.subsPerClientID, clientID)
+
+	if _, ok := b.clientIDsPerUser[userID]; !ok {
+		return
+	}
+	delete(b.clientIDsPerUser[userID], clientID)
+	if len(b.clientIDsPerUser[userID]) == 0 {
+		delete(b.clientIDsPerUser, userID)
 	}
 }
 
-func (r *Bridge) Unsubscribe(userID telegram.UserID) error {
-	// TODO: remove from the database
-	r.unsubscribe(userID)
-	return nil
+func (b *Bridge) subscription(clientID ClientID) (bridgeSubscription, bool) {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	sub, ok := b.subsPerClientID[clientID]
+	return sub, ok
 }

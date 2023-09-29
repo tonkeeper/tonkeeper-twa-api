@@ -14,12 +14,15 @@ import (
 type storage struct {
 	logger *zap.Logger
 	pool   *pgxpool.Pool
+
+	maxSubscriptionsPerUser int
 }
 
 var _ core.Storage = (*storage)(nil)
 
 const (
-	maxOpenConnections = 20
+	maxOpenConnections      = 20
+	maxSubscriptionsPerUser = 1_000
 )
 
 func New(logger *zap.Logger, postgresURI string) (*storage, error) {
@@ -32,7 +35,7 @@ func New(logger *zap.Logger, postgresURI string) (*storage, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &storage{logger: logger, pool: pool}, nil
+	return &storage{logger: logger, pool: pool, maxSubscriptionsPerUser: maxSubscriptionsPerUser}, nil
 }
 
 func (s *storage) Pool() *pgxpool.Pool {
@@ -70,5 +73,35 @@ func (s *storage) GetAccountEventsSubscriptions(ctx context.Context) ([]core.Acc
 
 func (s *storage) UnsubscribeAccountEvents(ctx context.Context, userID telegram.UserID) error {
 	_, err := s.pool.Exec(ctx, "DELETE FROM twa.subscriptions WHERE telegram_user_id = $1", userID)
+	return err
+}
+
+func (s *storage) SubscribeToBridgeEvents(ctx context.Context, userID telegram.UserID, clientID core.ClientID, origin string) error {
+	// TODO: it'd be nice to have a transaction here
+	_, err := s.pool.Exec(ctx, "DELETE FROM twa.bridge_subscriptions WHERE telegram_user_id = $1 AND client_id = $2", userID, clientID)
+	if err != nil {
+		return err
+	}
+	var subscriptionsCount int
+	err = s.pool.QueryRow(ctx, "SELECT count(*) FROM twa.bridge_subscriptions WHERE telegram_user_id = $1", userID).Scan(&subscriptionsCount)
+	if err != nil {
+		return err
+	}
+	if subscriptionsCount >= s.maxSubscriptionsPerUser {
+		return fmt.Errorf("max subscriptions per user reached")
+	}
+	_, err = s.pool.Exec(ctx, `
+		INSERT INTO twa.bridge_subscriptions (telegram_user_id, client_id, origin) VALUES ($1, $2, $3) 
+		ON CONFLICT (telegram_user_id, origin) 
+		DO UPDATE set client_id = $2`, userID, clientID, origin)
+	return err
+}
+
+func (s *storage) UnsubscribeFromBridgeEvents(ctx context.Context, userID telegram.UserID, clientID *core.ClientID) error {
+	if clientID == nil {
+		_, err := s.pool.Exec(ctx, "DELETE FROM twa.bridge_subscriptions WHERE telegram_user_id = $1", userID)
+		return err
+	}
+	_, err := s.pool.Exec(ctx, "DELETE FROM twa.bridge_subscriptions WHERE telegram_user_id = $1 AND client_id = $2", userID, *clientID)
 	return err
 }
