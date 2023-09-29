@@ -37,15 +37,31 @@ func NewBridge(logger *zap.Logger, storage Storage, messageCh chan<- telegram.Me
 	}
 }
 
+func formatMessage(topic string, origin string) (string, error) {
+	switch topic {
+	case "sendTransaction":
+		return fmt.Sprintf("Transaction for %v", origin), nil
+	case "signData":
+		return fmt.Sprintf("Data signature request %v", origin), nil
+	default:
+		return "", fmt.Errorf("unknown topic")
+	}
+}
+
 // HandleWebhook is called by the HTTP Bridge when it receives a new event.
-func (b *Bridge) HandleWebhook(clientID ClientID, topic string, hash string) {
+func (b *Bridge) HandleWebhook(clientID ClientID, topic string) {
 	subscription, ok := b.subscription(clientID)
 	if !ok {
 		return
 	}
+	msg, err := formatMessage(topic, subscription.Origin)
+	if err != nil {
+		b.logger.Error("failed to format message", zap.Error(err))
+		return
+	}
 	b.messageCh <- telegram.Message{
 		UserID: subscription.UserID,
-		Text:   fmt.Sprintf("New event: %s from %v", topic, subscription.Origin),
+		Text:   msg,
 	}
 }
 
