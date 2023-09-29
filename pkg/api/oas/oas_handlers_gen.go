@@ -138,12 +138,12 @@ func (s *Server) handleAccountEventsSubscriptionStatusRequest(args [0]string, ar
 
 // handleBridgeWebhookRequest handles bridgeWebhook operation.
 //
-// POST /bridge/webhook/client_id
-func (s *Server) handleBridgeWebhookRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+// POST /bridge/webhook/{client_id}
+func (s *Server) handleBridgeWebhookRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("bridgeWebhook"),
 		semconv.HTTPMethodKey.String("POST"),
-		semconv.HTTPRouteKey.String("/bridge/webhook/client_id"),
+		semconv.HTTPRouteKey.String("/bridge/webhook/{client_id}"),
 	}
 
 	// Start a span for this request.

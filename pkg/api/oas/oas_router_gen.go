@@ -40,6 +40,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		s.notFound(w, r)
 		return
 	}
+	args := [1]string{}
 
 	// Static code generated router with unwrapped path search.
 	switch {
@@ -184,18 +185,25 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 						return
 					}
-				case 'w': // Prefix: "webhook/client_id"
-					if l := len("webhook/client_id"); len(elem) >= l && elem[0:l] == "webhook/client_id" {
+				case 'w': // Prefix: "webhook/"
+					if l := len("webhook/"); len(elem) >= l && elem[0:l] == "webhook/" {
 						elem = elem[l:]
 					} else {
 						break
 					}
 
+					// Param: "client_id"
+					// Leaf parameter
+					args[0] = elem
+					elem = ""
+
 					if len(elem) == 0 {
 						// Leaf node.
 						switch r.Method {
 						case "POST":
-							s.handleBridgeWebhookRequest([0]string{}, elemIsEscaped, w, r)
+							s.handleBridgeWebhookRequest([1]string{
+								args[0],
+							}, elemIsEscaped, w, r)
 						default:
 							s.notAllowed(w, r, "POST")
 						}
@@ -233,7 +241,7 @@ type Route struct {
 	operationID string
 	pathPattern string
 	count       int
-	args        [0]string
+	args        [1]string
 }
 
 // Name returns ogen operation name.
@@ -447,12 +455,17 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 							return
 						}
 					}
-				case 'w': // Prefix: "webhook/client_id"
-					if l := len("webhook/client_id"); len(elem) >= l && elem[0:l] == "webhook/client_id" {
+				case 'w': // Prefix: "webhook/"
+					if l := len("webhook/"); len(elem) >= l && elem[0:l] == "webhook/" {
 						elem = elem[l:]
 					} else {
 						break
 					}
+
+					// Param: "client_id"
+					// Leaf parameter
+					args[0] = elem
+					elem = ""
 
 					if len(elem) == 0 {
 						switch method {
@@ -460,9 +473,9 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 							// Leaf: BridgeWebhook
 							r.name = "BridgeWebhook"
 							r.operationID = "bridgeWebhook"
-							r.pathPattern = "/bridge/webhook/client_id"
+							r.pathPattern = "/bridge/webhook/{client_id}"
 							r.args = args
-							r.count = 0
+							r.count = 1
 							return r, true
 						default:
 							return

@@ -100,7 +100,7 @@ paths:
         'default':
           $ref: '#/components/responses/Error'
 
-  /bridge/webhook/client_id:
+  /bridge/webhook/{client_id}:
     post:
       operationId: bridgeWebhook
       parameters:
