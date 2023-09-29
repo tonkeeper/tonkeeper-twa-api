@@ -105,3 +105,21 @@ func (s *storage) UnsubscribeFromBridgeEvents(ctx context.Context, userID telegr
 	_, err := s.pool.Exec(ctx, "DELETE FROM twa.bridge_subscriptions WHERE telegram_user_id = $1 AND client_id = $2", userID, *clientID)
 	return err
 }
+
+func (s *storage) GetBridgeSubscriptions(ctx context.Context) ([]core.BridgeSubscription, error) {
+	rows, err := s.pool.Query(ctx, "SELECT telegram_user_id, client_id, origin FROM twa.bridge_subscriptions")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var result []core.BridgeSubscription
+	for rows.Next() {
+		var sub core.BridgeSubscription
+		if err := rows.Scan(&sub.TelegramUserID, &sub.ClientID, &sub.Origin); err != nil {
+			return nil, err
+		}
+		result = append(result, sub)
+	}
+	return result, nil
+}

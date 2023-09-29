@@ -205,3 +205,31 @@ func TestBridge_HandleWebhook(t *testing.T) {
 		})
 	}
 }
+
+func TestNewBridge(t *testing.T) {
+	s := &mockStorage{
+		OnGetBridgeSubscriptions: func(ctx context.Context) ([]BridgeSubscription, error) {
+			subscriptions := []BridgeSubscription{
+				{TelegramUserID: 2, ClientID: "2002", Origin: "dns.ton.org"},
+				{TelegramUserID: 3, ClientID: "3000", Origin: "ton.org"},
+				{TelegramUserID: 3, ClientID: "3001", Origin: "ton.org"},
+				{TelegramUserID: 3, ClientID: "3002", Origin: "dex.ton"},
+			}
+			return subscriptions, nil
+		},
+	}
+	bridge, err := NewBridge(zap.L(), s, nil)
+	require.Nil(t, err)
+	expectedSubsPerClientID := map[ClientID]bridgeSubscription{
+		"2002": {Origin: "dns.ton.org", UserID: 2},
+		"3000": {Origin: "ton.org", UserID: 3},
+		"3001": {Origin: "ton.org", UserID: 3},
+		"3002": {Origin: "dex.ton", UserID: 3},
+	}
+	require.Equal(t, expectedSubsPerClientID, bridge.subsPerClientID)
+	expectedClientIDsPerUser := map[telegram.UserID]map[ClientID]struct{}{
+		2: {"2002": {}},
+		3: {"3000": {}, "3001": {}, "3002": {}},
+	}
+	require.Equal(t, expectedClientIDsPerUser, bridge.clientIDsPerUser)
+}

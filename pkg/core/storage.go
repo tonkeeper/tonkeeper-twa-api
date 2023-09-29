@@ -12,6 +12,12 @@ type AccountEventsSubscription struct {
 	Account        ton.AccountID
 }
 
+type BridgeSubscription struct {
+	TelegramUserID telegram.UserID
+	ClientID       ClientID
+	Origin         string
+}
+
 type Storage interface {
 	SubscribeToAccountEvents(ctx context.Context, userID telegram.UserID, account ton.Address) error
 	GetAccountEventsSubscriptions(ctx context.Context) ([]AccountEventsSubscription, error)
@@ -19,4 +25,6 @@ type Storage interface {
 
 	SubscribeToBridgeEvents(ctx context.Context, userID telegram.UserID, clientID ClientID, origin string) error
 	UnsubscribeFromBridgeEvents(ctx context.Context, userID telegram.UserID, clientID *ClientID) error
+
+	GetBridgeSubscriptions(ctx context.Context) ([]BridgeSubscription, error)
 }

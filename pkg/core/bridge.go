@@ -27,14 +27,30 @@ type Bridge struct {
 	clientIDsPerUser map[telegram.UserID]map[ClientID]struct{}
 }
 
-func NewBridge(logger *zap.Logger, storage Storage, messageCh chan<- telegram.Message) *Bridge {
+func NewBridge(logger *zap.Logger, storage Storage, messageCh chan<- telegram.Message) (*Bridge, error) {
+	subscriptions, err := storage.GetBridgeSubscriptions(context.TODO())
+	if err != nil {
+		return nil, err
+	}
+	subsPerClientID := make(map[ClientID]bridgeSubscription)
+	clientIDsPerUser := make(map[telegram.UserID]map[ClientID]struct{})
+	for _, sub := range subscriptions {
+		if _, ok := clientIDsPerUser[sub.TelegramUserID]; !ok {
+			clientIDsPerUser[sub.TelegramUserID] = make(map[ClientID]struct{})
+		}
+		clientIDsPerUser[sub.TelegramUserID][sub.ClientID] = struct{}{}
+		subsPerClientID[sub.ClientID] = bridgeSubscription{
+			Origin: sub.Origin,
+			UserID: sub.TelegramUserID,
+		}
+	}
 	return &Bridge{
 		logger:           logger,
 		storage:          storage,
 		messageCh:        messageCh,
-		subsPerClientID:  map[ClientID]bridgeSubscription{},
-		clientIDsPerUser: map[telegram.UserID]map[ClientID]struct{}{},
-	}
+		subsPerClientID:  subsPerClientID,
+		clientIDsPerUser: clientIDsPerUser,
+	}, nil
 }
 
 func formatMessage(topic string, origin string) (string, error) {

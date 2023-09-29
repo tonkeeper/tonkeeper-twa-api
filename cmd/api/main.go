@@ -55,7 +55,10 @@ func main() {
 
 	go notificator.Run(context.TODO(), messageCh)
 
-	bridge := core.NewBridge(logger, s, messageCh)
+	bridge, err := core.NewBridge(logger, s, messageCh)
+	if err != nil {
+		logger.Fatal("core.NewBridge() failed", zap.Error(err))
+	}
 
 	handler, err := api.NewHandler(logger, notificator, bridge, config)
 	if err != nil {
