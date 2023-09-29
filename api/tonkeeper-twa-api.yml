@@ -42,6 +42,28 @@ paths:
         'default':
           $ref: '#/components/responses/Error'
 
+  /account-events/subscription-status:
+    post:
+      description: Get a status of account events subscription.
+      operationId: accountEventsSubscriptionStatus
+      requestBody:
+        $ref: "#/components/requestBodies/AccountEventsSubscriptionStatusRequest"
+      responses:
+        '200':
+          description: subscription status
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - subscribed
+                properties:
+                  subscribed:
+                    type: boolean
+                    example: true
+        'default':
+          $ref: '#/components/responses/Error'
+
   /account-events/unsubscribe:
     post:
       description: Unsubscribe from notifications about events in the TON blockchain for the specified address.
@@ -131,6 +153,25 @@ components:
                 type: string
                 description: "Base64 encoded twa init data"
                 example: "YXV0aF9kYXRlPTxhdXRoX2RhdGU+XG5xdWVyeV9pZD08cXVlcnlfaWQ+XG51c2VyPTx1c2VyPg=="
+
+    AccountEventsSubscriptionStatusRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - twa_init_data
+              - address
+            properties:
+              twa_init_data:
+                type: string
+                description: "Base64 encoded twa init data"
+                example: "YXV0aF9kYXRlPTxhdXRoX2RhdGU+XG5xdWVyeV9pZD08cXVlcnlfaWQ+XG51c2VyPTx1c2VyPg=="
+              address:
+                type: string
+                description: "Wallet or smart contract address"
+                example: "0:97146a46acc2654y27947f14c4a4b14273e954f78bc017790b41208b0043200b"
 
     AccountEventsSubscriptionRequest:
       required: true

@@ -13,6 +13,15 @@ type UnimplementedHandler struct{}
 
 var _ Handler = UnimplementedHandler{}
 
+// AccountEventsSubscriptionStatus implements accountEventsSubscriptionStatus operation.
+//
+// Get a status of account events subscription.
+//
+// POST /account-events/subscription-status
+func (UnimplementedHandler) AccountEventsSubscriptionStatus(ctx context.Context, req *AccountEventsSubscriptionStatusReq) (r *AccountEventsSubscriptionStatusOK, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // BridgeWebhook implements bridgeWebhook operation.
 //
 // POST /bridge/webhook/client_id

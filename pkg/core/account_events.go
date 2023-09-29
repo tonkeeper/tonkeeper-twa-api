@@ -50,7 +50,6 @@ func NewNotificator(logger *zap.Logger, storage Storage, tonapiKey string) (*Acc
 	if err != nil {
 		return nil, err
 	}
-
 	subsPerUserID := make(map[telegram.UserID]map[ton.AccountID]struct{})
 	subsPerAccountID := make(map[ton.AccountID]map[telegram.UserID]struct{})
 
@@ -98,6 +97,17 @@ type TransactionEventData struct {
 	AccountID tongo.AccountID `json:"account_id"`
 	Lt        uint64          `json:"lt"`
 	TxHash    string          `json:"tx_hash"`
+}
+
+func (n *AccountEventsNotificator) IsSubscribed(userID telegram.UserID, account ton.AccountID) bool {
+	n.mu.RLock()
+	defer n.mu.RUnlock()
+	usersIDs, ok := n.subsPerAccountID[account]
+	if !ok {
+		return false
+	}
+	_, ok = usersIDs[userID]
+	return ok
 }
 
 func (n *AccountEventsNotificator) isSubscribed(account ton.AccountID) bool {
