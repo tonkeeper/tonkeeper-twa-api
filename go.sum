@@ -174,6 +174,7 @@ github.com/stretchr/testify v1.7.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/
 github.com/stretchr/testify v1.8.0/go.mod h1:yNjHg4UonilssWZ8iaSj1OCr/vHnekPRkoO+kdMU+MU=
 github.com/stretchr/testify v1.8.1/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o6fzry7u4=
 github.com/stretchr/testify v1.8.4 h1:CcVxjf3Q8PM0mHUKJCdn+eZZtm5yQwehR5yeSVQQcUk=
+github.com/stretchr/testify v1.8.4/go.mod h1:sz/lmYIOXD/1dqDmKjjqLyZ2RngseejIcXlSw2iwfAo=
 github.com/tonkeeper/opentonapi v1.0.1-0.20230927063627-355a22c175b5 h1:CPc8KPmTQs5/bEfaqGfYCgzN5YrZ541iRipuxHJu13w=
 github.com/tonkeeper/opentonapi v1.0.1-0.20230927063627-355a22c175b5/go.mod h1:9lHvDqAfbwtcUVcr/WBzpBqCo+MXnGpUbSLYiVOdwOY=
 github.com/tonkeeper/tongo v1.2.3-0.20230913212511-9b46bf078ec1 h1:0Bk19tz36nTJFrky7hNRXQFZ3BxWJOE2zuZM6UxnHUc=

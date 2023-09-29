@@ -16,4 +16,7 @@ type Storage interface {
 	SubscribeToAccountEvents(ctx context.Context, userID telegram.UserID, account ton.Address) error
 	GetAccountEventsSubscriptions(ctx context.Context) ([]AccountEventsSubscription, error)
 	UnsubscribeAccountEvents(ctx context.Context, userID telegram.UserID) error
+
+	SubscribeToBridgeEvents(ctx context.Context, userID telegram.UserID, clientID ClientID, origin string) error
+	UnsubscribeFromBridgeEvents(ctx context.Context, userID telegram.UserID, clientID *ClientID) error
 }
