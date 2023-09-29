@@ -21,7 +21,11 @@ type Handler struct {
 	tonConnect     *tonconnect.Server
 	notificator    *core.AccountEventsNotificator
 	bridge         *core.Bridge
+
+	extractUserFn extractUserFn
 }
+
+type extractUserFn func(data string, telegramSecret string) (telegram.UserID, error)
 
 type Config struct {
 	TonConnectSecret  string
@@ -45,6 +49,7 @@ func NewHandler(logger *zap.Logger, notificator *core.AccountEventsNotificator, 
 		tonConnect:     tonConnect,
 		notificator:    notificator,
 		telegramSecret: config.TelegramBotSecret,
+		extractUserFn:  telegram.ExtractUserIDFromInitData,
 	}, nil
 }
 
@@ -87,7 +92,7 @@ func (h *Handler) SubscribeToAccountEvents(ctx context.Context, req *oas.Subscri
 	if !verified {
 		return BadRequest("failed to verify proof")
 	}
-	userID, err := telegram.ExtractUserIDFromInitData(req.TwaInitData, h.telegramSecret)
+	userID, err := h.extractUserFn(req.TwaInitData, h.telegramSecret)
 	if err != nil {
 		return BadRequest(err.Error())
 	}
@@ -97,8 +102,21 @@ func (h *Handler) SubscribeToAccountEvents(ctx context.Context, req *oas.Subscri
 	return nil
 }
 
+func (h *Handler) AccountEventsSubscriptionStatus(ctx context.Context, req *oas.AccountEventsSubscriptionStatusReq) (*oas.AccountEventsSubscriptionStatusOK, error) {
+	userID, err := h.extractUserFn(req.TwaInitData, h.telegramSecret)
+	if err != nil {
+		return nil, BadRequest(err.Error())
+	}
+	accountID, err := tongo.ParseAccountID(req.Address)
+	if err != nil {
+		return nil, BadRequest(err.Error())
+	}
+	subscribed := h.notificator.IsSubscribed(userID, accountID)
+	return &oas.AccountEventsSubscriptionStatusOK{Subscribed: subscribed}, nil
+}
+
 func (h *Handler) UnsubscribeFromAccountEvents(ctx context.Context, req *oas.UnsubscribeFromAccountEventsReq) error {
-	userID, err := telegram.ExtractUserIDFromInitData(req.TwaInitData, h.telegramSecret)
+	userID, err := h.extractUserFn(req.TwaInitData, h.telegramSecret)
 	if err != nil {
 		return BadRequest(err.Error())
 	}
@@ -109,7 +127,7 @@ func (h *Handler) UnsubscribeFromAccountEvents(ctx context.Context, req *oas.Uns
 }
 
 func (h *Handler) SubscribeToBridgeEvents(ctx context.Context, req *oas.SubscribeToBridgeEventsReq) error {
-	userID, err := telegram.ExtractUserIDFromInitData(req.TwaInitData, h.telegramSecret)
+	userID, err := h.extractUserFn(req.TwaInitData, h.telegramSecret)
 	if err != nil {
 		return BadRequest(err.Error())
 	}
@@ -125,7 +143,7 @@ func (h *Handler) BridgeWebhook(ctx context.Context, req *oas.BridgeWebhookReq, 
 }
 
 func (h *Handler) UnsubscribeFromBridgeEvents(ctx context.Context, req *oas.UnsubscribeFromBridgeEventsReq) error {
-	userID, err := telegram.ExtractUserIDFromInitData(req.TwaInitData, h.telegramSecret)
+	userID, err := h.extractUserFn(req.TwaInitData, h.telegramSecret)
 	if err != nil {
 		return BadRequest(err.Error())
 	}

@@ -70,23 +70,53 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					break
 				}
 				switch elem[0] {
-				case 's': // Prefix: "subscribe"
-					if l := len("subscribe"); len(elem) >= l && elem[0:l] == "subscribe" {
+				case 's': // Prefix: "subscri"
+					if l := len("subscri"); len(elem) >= l && elem[0:l] == "subscri" {
 						elem = elem[l:]
 					} else {
 						break
 					}
 
 					if len(elem) == 0 {
-						// Leaf node.
-						switch r.Method {
-						case "POST":
-							s.handleSubscribeToAccountEventsRequest([0]string{}, elemIsEscaped, w, r)
-						default:
-							s.notAllowed(w, r, "POST")
+						break
+					}
+					switch elem[0] {
+					case 'b': // Prefix: "be"
+						if l := len("be"); len(elem) >= l && elem[0:l] == "be" {
+							elem = elem[l:]
+						} else {
+							break
 						}
 
-						return
+						if len(elem) == 0 {
+							// Leaf node.
+							switch r.Method {
+							case "POST":
+								s.handleSubscribeToAccountEventsRequest([0]string{}, elemIsEscaped, w, r)
+							default:
+								s.notAllowed(w, r, "POST")
+							}
+
+							return
+						}
+					case 'p': // Prefix: "ption-status"
+						if l := len("ption-status"); len(elem) >= l && elem[0:l] == "ption-status" {
+							elem = elem[l:]
+						} else {
+							break
+						}
+
+						if len(elem) == 0 {
+							// Leaf node.
+							switch r.Method {
+							case "POST":
+								s.handleAccountEventsSubscriptionStatusRequest([0]string{}, elemIsEscaped, w, r)
+							default:
+								s.notAllowed(w, r, "POST")
+							}
+
+							return
+						}
 					}
 				case 'u': // Prefix: "unsubscribe"
 					if l := len("unsubscribe"); len(elem) >= l && elem[0:l] == "unsubscribe" {
@@ -288,25 +318,58 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 					break
 				}
 				switch elem[0] {
-				case 's': // Prefix: "subscribe"
-					if l := len("subscribe"); len(elem) >= l && elem[0:l] == "subscribe" {
+				case 's': // Prefix: "subscri"
+					if l := len("subscri"); len(elem) >= l && elem[0:l] == "subscri" {
 						elem = elem[l:]
 					} else {
 						break
 					}
 
 					if len(elem) == 0 {
-						switch method {
-						case "POST":
-							// Leaf: SubscribeToAccountEvents
-							r.name = "SubscribeToAccountEvents"
-							r.operationID = "subscribeToAccountEvents"
-							r.pathPattern = "/account-events/subscribe"
-							r.args = args
-							r.count = 0
-							return r, true
-						default:
-							return
+						break
+					}
+					switch elem[0] {
+					case 'b': // Prefix: "be"
+						if l := len("be"); len(elem) >= l && elem[0:l] == "be" {
+							elem = elem[l:]
+						} else {
+							break
+						}
+
+						if len(elem) == 0 {
+							switch method {
+							case "POST":
+								// Leaf: SubscribeToAccountEvents
+								r.name = "SubscribeToAccountEvents"
+								r.operationID = "subscribeToAccountEvents"
+								r.pathPattern = "/account-events/subscribe"
+								r.args = args
+								r.count = 0
+								return r, true
+							default:
+								return
+							}
+						}
+					case 'p': // Prefix: "ption-status"
+						if l := len("ption-status"); len(elem) >= l && elem[0:l] == "ption-status" {
+							elem = elem[l:]
+						} else {
+							break
+						}
+
+						if len(elem) == 0 {
+							switch method {
+							case "POST":
+								// Leaf: AccountEventsSubscriptionStatus
+								r.name = "AccountEventsSubscriptionStatus"
+								r.operationID = "accountEventsSubscriptionStatus"
+								r.pathPattern = "/account-events/subscription-status"
+								r.args = args
+								r.count = 0
+								return r, true
+							default:
+								return
+							}
 						}
 					}
 				case 'u': // Prefix: "unsubscribe"

@@ -8,6 +8,12 @@ import (
 
 // Handler handles operations described by OpenAPI v3 specification.
 type Handler interface {
+	// AccountEventsSubscriptionStatus implements accountEventsSubscriptionStatus operation.
+	//
+	// Get a status of account events subscription.
+	//
+	// POST /account-events/subscription-status
+	AccountEventsSubscriptionStatus(ctx context.Context, req *AccountEventsSubscriptionStatusReq) (*AccountEventsSubscriptionStatusOK, error)
 	// BridgeWebhook implements bridgeWebhook operation.
 	//
 	// POST /bridge/webhook/client_id

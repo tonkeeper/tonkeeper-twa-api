@@ -10,6 +10,47 @@ func (s *ErrorStatusCode) Error() string {
 	return fmt.Sprintf("code %d: %+v", s.StatusCode, s.Response)
 }
 
+type AccountEventsSubscriptionStatusOK struct {
+	Subscribed bool `json:"subscribed"`
+}
+
+// GetSubscribed returns the value of Subscribed.
+func (s *AccountEventsSubscriptionStatusOK) GetSubscribed() bool {
+	return s.Subscribed
+}
+
+// SetSubscribed sets the value of Subscribed.
+func (s *AccountEventsSubscriptionStatusOK) SetSubscribed(val bool) {
+	s.Subscribed = val
+}
+
+type AccountEventsSubscriptionStatusReq struct {
+	// Base64 encoded twa init data.
+	TwaInitData string `json:"twa_init_data"`
+	// Wallet or smart contract address.
+	Address string `json:"address"`
+}
+
+// GetTwaInitData returns the value of TwaInitData.
+func (s *AccountEventsSubscriptionStatusReq) GetTwaInitData() string {
+	return s.TwaInitData
+}
+
+// GetAddress returns the value of Address.
+func (s *AccountEventsSubscriptionStatusReq) GetAddress() string {
+	return s.Address
+}
+
+// SetTwaInitData sets the value of TwaInitData.
+func (s *AccountEventsSubscriptionStatusReq) SetTwaInitData(val string) {
+	s.TwaInitData = val
+}
+
+// SetAddress sets the value of Address.
+func (s *AccountEventsSubscriptionStatusReq) SetAddress(val string) {
+	s.Address = val
+}
+
 // BridgeWebhookOK is response for BridgeWebhook operation.
 type BridgeWebhookOK struct{}
 
