@@ -24,7 +24,7 @@ func (UnimplementedHandler) AccountEventsSubscriptionStatus(ctx context.Context,
 
 // BridgeWebhook implements bridgeWebhook operation.
 //
-// POST /bridge/webhook/client_id
+// POST /bridge/webhook/{client_id}
 func (UnimplementedHandler) BridgeWebhook(ctx context.Context, req *BridgeWebhookReq, params BridgeWebhookParams) error {
 	return ht.ErrNotImplemented
 }

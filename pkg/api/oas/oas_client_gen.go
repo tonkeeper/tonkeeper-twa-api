@@ -15,6 +15,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.19.0"
 	"go.opentelemetry.io/otel/trace"
 
+	"github.com/ogen-go/ogen/conv"
 	ht "github.com/ogen-go/ogen/http"
 	"github.com/ogen-go/ogen/otelogen"
 	"github.com/ogen-go/ogen/uri"
@@ -30,7 +31,7 @@ type Invoker interface {
 	AccountEventsSubscriptionStatus(ctx context.Context, request *AccountEventsSubscriptionStatusReq) (*AccountEventsSubscriptionStatusOK, error)
 	// BridgeWebhook invokes bridgeWebhook operation.
 	//
-	// POST /bridge/webhook/client_id
+	// POST /bridge/webhook/{client_id}
 	BridgeWebhook(ctx context.Context, request *BridgeWebhookReq, params BridgeWebhookParams) error
 	// GetTonConnectPayload invokes getTonConnectPayload operation.
 	//
@@ -194,7 +195,7 @@ func (c *Client) sendAccountEventsSubscriptionStatus(ctx context.Context, reques
 
 // BridgeWebhook invokes bridgeWebhook operation.
 //
-// POST /bridge/webhook/client_id
+// POST /bridge/webhook/{client_id}
 func (c *Client) BridgeWebhook(ctx context.Context, request *BridgeWebhookReq, params BridgeWebhookParams) error {
 	res, err := c.sendBridgeWebhook(ctx, request, params)
 	_ = res
@@ -205,7 +206,7 @@ func (c *Client) sendBridgeWebhook(ctx context.Context, request *BridgeWebhookRe
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("bridgeWebhook"),
 		semconv.HTTPMethodKey.String("POST"),
-		semconv.HTTPRouteKey.String("/bridge/webhook/client_id"),
+		semconv.HTTPRouteKey.String("/bridge/webhook/{client_id}"),
 	}
 
 	// Run stopwatch.
@@ -237,8 +238,26 @@ func (c *Client) sendBridgeWebhook(ctx context.Context, request *BridgeWebhookRe
 
 	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [1]string
-	pathParts[0] = "/bridge/webhook/client_id"
+	var pathParts [2]string
+	pathParts[0] = "/bridge/webhook/"
+	{
+		// Encode "client_id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "client_id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.ClientID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
 	uri.AddPathParts(u, pathParts[:]...)
 
 	stage = "EncodeRequest"

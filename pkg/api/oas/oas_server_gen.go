@@ -16,7 +16,7 @@ type Handler interface {
 	AccountEventsSubscriptionStatus(ctx context.Context, req *AccountEventsSubscriptionStatusReq) (*AccountEventsSubscriptionStatusOK, error)
 	// BridgeWebhook implements bridgeWebhook operation.
 	//
-	// POST /bridge/webhook/client_id
+	// POST /bridge/webhook/{client_id}
 	BridgeWebhook(ctx context.Context, req *BridgeWebhookReq, params BridgeWebhookParams) error
 	// GetTonConnectPayload implements getTonConnectPayload operation.
 	//
