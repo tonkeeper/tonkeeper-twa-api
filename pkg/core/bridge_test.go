@@ -147,3 +147,61 @@ func TestBridge_Unsubscribe(t *testing.T) {
 		})
 	}
 }
+
+func TestBridge_HandleWebhook(t *testing.T) {
+	tests := []struct {
+		name     string
+		clientID ClientID
+		topic    string
+		wantMsgs []telegram.Message
+	}{
+		{
+			name:     "sendTransaction",
+			clientID: "1001",
+			topic:    "sendTransaction",
+			wantMsgs: []telegram.Message{{UserID: 1, Text: "Transaction for ton.org"}},
+		},
+		{
+			name:     "signData",
+			clientID: "2002",
+			topic:    "signData",
+			wantMsgs: []telegram.Message{{UserID: 2, Text: "Data signature request dns.ton.org"}},
+		},
+		{
+			name:     "no client_id -> no message",
+			clientID: "3005",
+			topic:    "signData",
+		},
+		{
+			name:     "unknown topic -> no message",
+			clientID: "2002",
+			topic:    "unknownTopic",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			messageCh := make(chan telegram.Message, 1)
+			b := &Bridge{
+				logger: zap.L(),
+				subsPerClientID: map[ClientID]bridgeSubscription{
+					"1001": {Origin: "ton.org", UserID: 1},
+					"1002": {Origin: "dex.ton", UserID: 1},
+					"2002": {Origin: "dns.ton.org", UserID: 2},
+				},
+				clientIDsPerUser: map[telegram.UserID]map[ClientID]struct{}{
+					1: {"1000": {}, "1001": {}, "1002": {}},
+					2: {"2002": {}},
+				},
+				messageCh: messageCh,
+			}
+			b.HandleWebhook(tt.clientID, tt.topic)
+			close(messageCh)
+
+			var msgs []telegram.Message
+			for msg := range messageCh {
+				msgs = append(msgs, msg)
+			}
+			require.Equal(t, tt.wantMsgs, msgs)
+		})
+	}
+}

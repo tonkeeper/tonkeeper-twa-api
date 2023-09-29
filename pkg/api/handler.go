@@ -138,7 +138,7 @@ func (h *Handler) SubscribeToBridgeEvents(ctx context.Context, req *oas.Subscrib
 }
 
 func (h *Handler) BridgeWebhook(ctx context.Context, req *oas.BridgeWebhookReq, params oas.BridgeWebhookParams) error {
-	h.bridge.HandleWebhook(core.ClientID(params.ClientID), req.Topic, req.Hash)
+	h.bridge.HandleWebhook(core.ClientID(params.ClientID), req.Topic)
 	return nil
 }
 
