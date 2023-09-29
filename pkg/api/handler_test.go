@@ -38,6 +38,10 @@ func (m *MockStorage) UnsubscribeFromBridgeEvents(ctx context.Context, userID te
 	return nil
 }
 
+func (m *MockStorage) GetBridgeSubscriptions(ctx context.Context) ([]core.BridgeSubscription, error) {
+	return nil, nil
+}
+
 var _ core.Storage = (*MockStorage)(nil)
 
 func TestHandler_AccountEventsSubscriptionStatus(t *testing.T) {

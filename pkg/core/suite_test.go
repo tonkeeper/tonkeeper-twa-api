@@ -11,6 +11,7 @@ import (
 type mockStorage struct {
 	OnUnsubscribeFromBridgeEvents func(ctx context.Context, userID telegram.UserID, clientID *ClientID) error
 	OnSubscribeToBridgeEvents     func(ctx context.Context, userID telegram.UserID, clientID ClientID, origin string) error
+	OnGetBridgeSubscriptions      func(ctx context.Context) ([]BridgeSubscription, error)
 }
 
 func (m *mockStorage) SubscribeToAccountEvents(ctx context.Context, userID telegram.UserID, account ton.Address) error {
@@ -31,6 +32,10 @@ func (m *mockStorage) SubscribeToBridgeEvents(ctx context.Context, userID telegr
 
 func (m *mockStorage) UnsubscribeFromBridgeEvents(ctx context.Context, userID telegram.UserID, clientID *ClientID) error {
 	return m.OnUnsubscribeFromBridgeEvents(ctx, userID, clientID)
+}
+
+func (m *mockStorage) GetBridgeSubscriptions(ctx context.Context) ([]BridgeSubscription, error) {
+	return m.OnGetBridgeSubscriptions(ctx)
 }
 
 var _ Storage = (*mockStorage)(nil)
