@@ -87,7 +87,7 @@ func (h *Handler) SubscribeToAccountEvents(ctx context.Context, req *oas.Subscri
 	}
 	verified, _, err := h.tonConnect.CheckProof(ctx, &proof)
 	if err != nil {
-		return BadRequest(err.Error())
+		return BadRequest(fmt.Sprintf("failed to check proof: %v", err))
 	}
 	if !verified {
 		return BadRequest("failed to verify proof")
