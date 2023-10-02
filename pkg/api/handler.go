@@ -149,7 +149,8 @@ func (h *Handler) UnsubscribeFromBridgeEvents(ctx context.Context, req *oas.Unsu
 	}
 	var clientID *core.ClientID
 	if req.ClientID.IsSet() {
-		*clientID = core.ClientID(req.ClientID.Value)
+		id := core.ClientID(req.ClientID.Value)
+		clientID = &id
 	}
 	if err := h.bridge.Unsubscribe(userID, clientID); err != nil {
 		return InternalError(err)
