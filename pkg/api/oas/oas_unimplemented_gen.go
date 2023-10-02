@@ -15,7 +15,7 @@ var _ Handler = UnimplementedHandler{}
 
 // AccountEventsSubscriptionStatus implements accountEventsSubscriptionStatus operation.
 //
-// Get a status of account events subscription.
+// Get a status of an account-events subscription.
 //
 // POST /account-events/subscription-status
 func (UnimplementedHandler) AccountEventsSubscriptionStatus(ctx context.Context, req *AccountEventsSubscriptionStatusReq) (r *AccountEventsSubscriptionStatusOK, _ error) {
@@ -23,6 +23,8 @@ func (UnimplementedHandler) AccountEventsSubscriptionStatus(ctx context.Context,
 }
 
 // BridgeWebhook implements bridgeWebhook operation.
+//
+// Webhook called by the HTTP Bridge when an event occurs.
 //
 // POST /bridge/webhook/{client_id}
 func (UnimplementedHandler) BridgeWebhook(ctx context.Context, req *BridgeWebhookReq, params BridgeWebhookParams) error {
@@ -40,7 +42,7 @@ func (UnimplementedHandler) GetTonConnectPayload(ctx context.Context) (r *GetTon
 
 // SubscribeToAccountEvents implements subscribeToAccountEvents operation.
 //
-// Subscribe to notifications about events in the TON blockchain for the specified address.
+// Subscribe to notifications about events in the TON blockchain for a specific address.
 //
 // POST /account-events/subscribe
 func (UnimplementedHandler) SubscribeToAccountEvents(ctx context.Context, req *SubscribeToAccountEventsReq) error {
@@ -58,7 +60,7 @@ func (UnimplementedHandler) SubscribeToBridgeEvents(ctx context.Context, req *Su
 
 // UnsubscribeFromAccountEvents implements unsubscribeFromAccountEvents operation.
 //
-// Unsubscribe from notifications about events in the TON blockchain for the specified address.
+// Unsubscribe from notifications about events in the TON blockchain for a specific address.
 //
 // POST /account-events/unsubscribe
 func (UnimplementedHandler) UnsubscribeFromAccountEvents(ctx context.Context, req *UnsubscribeFromAccountEventsReq) error {

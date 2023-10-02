@@ -7,13 +7,15 @@ import (
 	"github.com/tonkeeper/tongo"
 	"github.com/tonkeeper/tongo/liteapi"
 	"github.com/tonkeeper/tongo/tonconnect"
-	"github.com/tonkeeper/tonkeeper-twa-api/pkg/telegram"
 	"go.uber.org/zap"
 
 	"github.com/tonkeeper/tonkeeper-twa-api/pkg/api/oas"
 	"github.com/tonkeeper/tonkeeper-twa-api/pkg/core"
+	"github.com/tonkeeper/tonkeeper-twa-api/pkg/telegram"
 )
 
+// Handler handles operations described by OpenAPI v3 specification of this service.
+// It implements oas.Handler interface and every API operation is implemented as a method on Handler.
 type Handler struct {
 	logger *zap.Logger
 
@@ -22,10 +24,15 @@ type Handler struct {
 	notificator    *core.AccountEventsNotificator
 	bridge         *core.Bridge
 
-	extractUserFn extractUserFn
+	// extractUserFn is an indirection for testing.
+	extractUserFn extractUserFromTwaInitDataFn
 }
 
-type extractUserFn func(data string, telegramSecret string) (telegram.UserID, error)
+// extractUserFromTwaInitDataFn extracts a telegram user ID from TWA init data.
+//
+// For more details see
+// https://docs.twa.dev/docs/launch-params/init-data#authorization-and-authentication
+type extractUserFromTwaInitDataFn func(data string, telegramSecret string) (telegram.UserID, error)
 
 type Config struct {
 	TonConnectSecret  string
@@ -62,6 +69,7 @@ func (h *Handler) NewError(ctx context.Context, err error) *oas.ErrorStatusCode 
 	}
 }
 
+// GetTonConnectPayload returns a challenge for TON Connect.
 func (h *Handler) GetTonConnectPayload(ctx context.Context) (*oas.GetTonConnectPayloadOK, error) {
 	payload, err := h.tonConnect.GeneratePayload()
 	if err != nil {
@@ -70,6 +78,7 @@ func (h *Handler) GetTonConnectPayload(ctx context.Context) (*oas.GetTonConnectP
 	return &oas.GetTonConnectPayloadOK{Payload: payload}, nil
 }
 
+// SubscribeToAccountEvents subscribes to notifications about events in the TON blockchain for a specific address.
 func (h *Handler) SubscribeToAccountEvents(ctx context.Context, req *oas.SubscribeToAccountEventsReq) error {
 	proof := tonconnect.Proof{
 		Address: req.Address,
@@ -102,6 +111,7 @@ func (h *Handler) SubscribeToAccountEvents(ctx context.Context, req *oas.Subscri
 	return nil
 }
 
+// AccountEventsSubscriptionStatus returns a status of an account-events subscription.
 func (h *Handler) AccountEventsSubscriptionStatus(ctx context.Context, req *oas.AccountEventsSubscriptionStatusReq) (*oas.AccountEventsSubscriptionStatusOK, error) {
 	userID, err := h.extractUserFn(req.TwaInitData, h.telegramSecret)
 	if err != nil {
@@ -115,6 +125,7 @@ func (h *Handler) AccountEventsSubscriptionStatus(ctx context.Context, req *oas.
 	return &oas.AccountEventsSubscriptionStatusOK{Subscribed: subscribed}, nil
 }
 
+// UnsubscribeFromAccountEvents unsubscribes from notifications about events in the TON blockchain for a specific address.
 func (h *Handler) UnsubscribeFromAccountEvents(ctx context.Context, req *oas.UnsubscribeFromAccountEventsReq) error {
 	userID, err := h.extractUserFn(req.TwaInitData, h.telegramSecret)
 	if err != nil {
@@ -126,6 +137,7 @@ func (h *Handler) UnsubscribeFromAccountEvents(ctx context.Context, req *oas.Uns
 	return nil
 }
 
+// SubscribeToBridgeEvents subscribes to notifications from the HTTP Bridge regarding a specific smart contract or wallet.
 func (h *Handler) SubscribeToBridgeEvents(ctx context.Context, req *oas.SubscribeToBridgeEventsReq) error {
 	userID, err := h.extractUserFn(req.TwaInitData, h.telegramSecret)
 	if err != nil {
@@ -137,11 +149,13 @@ func (h *Handler) SubscribeToBridgeEvents(ctx context.Context, req *oas.Subscrib
 	return nil
 }
 
+// BridgeWebhook is called by the HTTP Bridge when an event occurs.
 func (h *Handler) BridgeWebhook(ctx context.Context, req *oas.BridgeWebhookReq, params oas.BridgeWebhookParams) error {
 	h.bridge.HandleWebhook(core.ClientID(params.ClientID), req.Topic)
 	return nil
 }
 
+// UnsubscribeFromBridgeEvents unsubscribes from bridge notifications.
 func (h *Handler) UnsubscribeFromBridgeEvents(ctx context.Context, req *oas.UnsubscribeFromBridgeEventsReq) error {
 	userID, err := h.extractUserFn(req.TwaInitData, h.telegramSecret)
 	if err != nil {

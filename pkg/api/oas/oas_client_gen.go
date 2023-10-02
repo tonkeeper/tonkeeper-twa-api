@@ -25,11 +25,13 @@ import (
 type Invoker interface {
 	// AccountEventsSubscriptionStatus invokes accountEventsSubscriptionStatus operation.
 	//
-	// Get a status of account events subscription.
+	// Get a status of an account-events subscription.
 	//
 	// POST /account-events/subscription-status
 	AccountEventsSubscriptionStatus(ctx context.Context, request *AccountEventsSubscriptionStatusReq) (*AccountEventsSubscriptionStatusOK, error)
 	// BridgeWebhook invokes bridgeWebhook operation.
+	//
+	// Webhook called by the HTTP Bridge when an event occurs.
 	//
 	// POST /bridge/webhook/{client_id}
 	BridgeWebhook(ctx context.Context, request *BridgeWebhookReq, params BridgeWebhookParams) error
@@ -41,7 +43,7 @@ type Invoker interface {
 	GetTonConnectPayload(ctx context.Context) (*GetTonConnectPayloadOK, error)
 	// SubscribeToAccountEvents invokes subscribeToAccountEvents operation.
 	//
-	// Subscribe to notifications about events in the TON blockchain for the specified address.
+	// Subscribe to notifications about events in the TON blockchain for a specific address.
 	//
 	// POST /account-events/subscribe
 	SubscribeToAccountEvents(ctx context.Context, request *SubscribeToAccountEventsReq) error
@@ -53,7 +55,7 @@ type Invoker interface {
 	SubscribeToBridgeEvents(ctx context.Context, request *SubscribeToBridgeEventsReq) error
 	// UnsubscribeFromAccountEvents invokes unsubscribeFromAccountEvents operation.
 	//
-	// Unsubscribe from notifications about events in the TON blockchain for the specified address.
+	// Unsubscribe from notifications about events in the TON blockchain for a specific address.
 	//
 	// POST /account-events/unsubscribe
 	UnsubscribeFromAccountEvents(ctx context.Context, request *UnsubscribeFromAccountEventsReq) error
@@ -119,7 +121,7 @@ func (c *Client) requestURL(ctx context.Context) *url.URL {
 
 // AccountEventsSubscriptionStatus invokes accountEventsSubscriptionStatus operation.
 //
-// Get a status of account events subscription.
+// Get a status of an account-events subscription.
 //
 // POST /account-events/subscription-status
 func (c *Client) AccountEventsSubscriptionStatus(ctx context.Context, request *AccountEventsSubscriptionStatusReq) (*AccountEventsSubscriptionStatusOK, error) {
@@ -194,6 +196,8 @@ func (c *Client) sendAccountEventsSubscriptionStatus(ctx context.Context, reques
 }
 
 // BridgeWebhook invokes bridgeWebhook operation.
+//
+// Webhook called by the HTTP Bridge when an event occurs.
 //
 // POST /bridge/webhook/{client_id}
 func (c *Client) BridgeWebhook(ctx context.Context, request *BridgeWebhookReq, params BridgeWebhookParams) error {
@@ -360,7 +364,7 @@ func (c *Client) sendGetTonConnectPayload(ctx context.Context) (res *GetTonConne
 
 // SubscribeToAccountEvents invokes subscribeToAccountEvents operation.
 //
-// Subscribe to notifications about events in the TON blockchain for the specified address.
+// Subscribe to notifications about events in the TON blockchain for a specific address.
 //
 // POST /account-events/subscribe
 func (c *Client) SubscribeToAccountEvents(ctx context.Context, request *SubscribeToAccountEventsReq) error {
@@ -512,7 +516,7 @@ func (c *Client) sendSubscribeToBridgeEvents(ctx context.Context, request *Subsc
 
 // UnsubscribeFromAccountEvents invokes unsubscribeFromAccountEvents operation.
 //
-// Unsubscribe from notifications about events in the TON blockchain for the specified address.
+// Unsubscribe from notifications about events in the TON blockchain for a specific address.
 //
 // POST /account-events/unsubscribe
 func (c *Client) UnsubscribeFromAccountEvents(ctx context.Context, request *UnsubscribeFromAccountEventsReq) error {
