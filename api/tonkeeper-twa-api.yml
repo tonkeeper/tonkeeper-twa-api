@@ -32,7 +32,7 @@ paths:
 
   /account-events/subscribe:
     post:
-      description: Subscribe to notifications about events in the TON blockchain for the specified address.
+      description: Subscribe to notifications about events in the TON blockchain for a specific address.
       operationId: subscribeToAccountEvents
       requestBody:
         $ref: "#/components/requestBodies/AccountEventsSubscriptionRequest"
@@ -44,7 +44,7 @@ paths:
 
   /account-events/subscription-status:
     post:
-      description: Get a status of account events subscription.
+      description: Get a status of an account-events subscription.
       operationId: accountEventsSubscriptionStatus
       requestBody:
         $ref: "#/components/requestBodies/AccountEventsSubscriptionStatusRequest"
@@ -66,7 +66,7 @@ paths:
 
   /account-events/unsubscribe:
     post:
-      description: Unsubscribe from notifications about events in the TON blockchain for the specified address.
+      description: Unsubscribe from notifications about events in the TON blockchain for a specific address.
       operationId: unsubscribeFromAccountEvents
       requestBody:
         $ref: "#/components/requestBodies/CancelSubscriptionRequest"
@@ -102,6 +102,7 @@ paths:
 
   /bridge/webhook/{client_id}:
     post:
+      description: Webhook called by the HTTP Bridge when an event occurs.
       operationId: bridgeWebhook
       parameters:
         - $ref: '#/components/parameters/ClientID'
@@ -120,7 +121,7 @@ components:
       required: true
       schema:
         type: string
-        example: "YXV0aF9kYXRlPTxhdXRoX2RhdGU"
+        example: "3cac6dea533363e1aadb831b1bb1490fb391fda614106f8f7f0f2bc7eaef33e2"
 
   requestBodies:
     BridgeCancelSubscriptionRequest:

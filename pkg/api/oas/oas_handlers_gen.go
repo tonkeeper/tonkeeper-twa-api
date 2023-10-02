@@ -22,7 +22,7 @@ import (
 
 // handleAccountEventsSubscriptionStatusRequest handles accountEventsSubscriptionStatus operation.
 //
-// Get a status of account events subscription.
+// Get a status of an account-events subscription.
 //
 // POST /account-events/subscription-status
 func (s *Server) handleAccountEventsSubscriptionStatusRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -137,6 +137,8 @@ func (s *Server) handleAccountEventsSubscriptionStatusRequest(args [0]string, ar
 }
 
 // handleBridgeWebhookRequest handles bridgeWebhook operation.
+//
+// Webhook called by the HTTP Bridge when an event occurs.
 //
 // POST /bridge/webhook/{client_id}
 func (s *Server) handleBridgeWebhookRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -364,7 +366,7 @@ func (s *Server) handleGetTonConnectPayloadRequest(args [0]string, argsEscaped b
 
 // handleSubscribeToAccountEventsRequest handles subscribeToAccountEvents operation.
 //
-// Subscribe to notifications about events in the TON blockchain for the specified address.
+// Subscribe to notifications about events in the TON blockchain for a specific address.
 //
 // POST /account-events/subscribe
 func (s *Server) handleSubscribeToAccountEventsRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -596,7 +598,7 @@ func (s *Server) handleSubscribeToBridgeEventsRequest(args [0]string, argsEscape
 
 // handleUnsubscribeFromAccountEventsRequest handles unsubscribeFromAccountEvents operation.
 //
-// Unsubscribe from notifications about events in the TON blockchain for the specified address.
+// Unsubscribe from notifications about events in the TON blockchain for a specific address.
 //
 // POST /account-events/unsubscribe
 func (s *Server) handleUnsubscribeFromAccountEventsRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
