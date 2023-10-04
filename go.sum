@@ -349,6 +349,8 @@ github.com/tonkeeper/opentonapi v1.0.1-0.20230927063627-355a22c175b5 h1:CPc8KPmT
 github.com/tonkeeper/opentonapi v1.0.1-0.20230927063627-355a22c175b5/go.mod h1:9lHvDqAfbwtcUVcr/WBzpBqCo+MXnGpUbSLYiVOdwOY=
 github.com/tonkeeper/tongo v1.2.3-0.20230913212511-9b46bf078ec1 h1:0Bk19tz36nTJFrky7hNRXQFZ3BxWJOE2zuZM6UxnHUc=
 github.com/tonkeeper/tongo v1.2.3-0.20230913212511-9b46bf078ec1/go.mod h1:LdOBjpUz6vLp1EdX3E0XLNks9YI5XMSqaQahfOMrBEY=
+github.com/tonkeeper/tongo v1.3.1-0.20231004105015-243489c1eb93 h1:QFD69cj2exok592759zth6Cp1HoHNwbgp2sZW33Qbeg=
+github.com/tonkeeper/tongo v1.3.1-0.20231004105015-243489c1eb93/go.mod h1:LdOBjpUz6vLp1EdX3E0XLNks9YI5XMSqaQahfOMrBEY=
 github.com/yuin/goldmark v1.1.25/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.1.32/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
