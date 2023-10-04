@@ -15,14 +15,16 @@ type storage struct {
 	logger *zap.Logger
 	pool   *pgxpool.Pool
 
-	maxSubscriptionsPerUser int
+	maxBridgeSubscriptionsPerUser int
+	maxWalletsPerUser             int
 }
 
 var _ core.Storage = (*storage)(nil)
 
 const (
-	maxOpenConnections      = 20
-	maxSubscriptionsPerUser = 1_000
+	maxOpenConnections            = 20
+	maxBridgeSubscriptionsPerUser = 1_000
+	maxWalletsPerUser             = 1_000
 )
 
 func New(logger *zap.Logger, postgresURI string) (*storage, error) {
@@ -35,7 +37,12 @@ func New(logger *zap.Logger, postgresURI string) (*storage, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &storage{logger: logger, pool: pool, maxSubscriptionsPerUser: maxSubscriptionsPerUser}, nil
+	return &storage{
+		logger:                        logger,
+		pool:                          pool,
+		maxWalletsPerUser:             maxWalletsPerUser,
+		maxBridgeSubscriptionsPerUser: maxBridgeSubscriptionsPerUser,
+	}, nil
 }
 
 func (s *storage) Pool() *pgxpool.Pool {
@@ -43,7 +50,15 @@ func (s *storage) Pool() *pgxpool.Pool {
 }
 
 func (s *storage) SubscribeToAccountEvents(ctx context.Context, userID telegram.UserID, addr ton.Address) error {
-	_, err := s.pool.Exec(ctx, "INSERT INTO twa.subscriptions (telegram_user_id, account) VALUES ($1, $2) ON CONFLICT DO NOTHING", userID, addr.ID.ToRaw())
+	var walletsCount int
+	err := s.pool.QueryRow(ctx, "SELECT count(*) FROM twa.subscriptions WHERE telegram_user_id = $1", userID).Scan(&walletsCount)
+	if err != nil {
+		return err
+	}
+	if walletsCount >= s.maxWalletsPerUser {
+		return fmt.Errorf("max wallets per user reached")
+	}
+	_, err = s.pool.Exec(ctx, "INSERT INTO twa.subscriptions (telegram_user_id, account) VALUES ($1, $2) ON CONFLICT DO NOTHING", userID, addr.ID.ToRaw())
 	return err
 }
 
@@ -87,7 +102,7 @@ func (s *storage) SubscribeToBridgeEvents(ctx context.Context, userID telegram.U
 	if err != nil {
 		return err
 	}
-	if subscriptionsCount >= s.maxSubscriptionsPerUser {
+	if subscriptionsCount >= s.maxBridgeSubscriptionsPerUser {
 		return fmt.Errorf("max subscriptions per user reached")
 	}
 	_, err = s.pool.Exec(ctx, `
