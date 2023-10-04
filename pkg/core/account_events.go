@@ -95,16 +95,16 @@ func (n *AccountEventsNotificator) IsSubscribed(userID telegram.UserID, account 
 	return ok
 }
 
-// isSubscribedAny returns true if we are subscribed to any of the given accounts.
-func (n *AccountEventsNotificator) isSubscribedAny(accountIDs []ton.AccountID) bool {
+func (n *AccountEventsNotificator) subscribedAccounts(accountIDs []ton.AccountID) []ton.AccountID {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
+	var accounts []ton.AccountID
 	for _, accountID := range accountIDs {
 		if _, ok := n.subsPerAccountID[accountID]; ok {
-			return true
+			accounts = append(accounts, accountID)
 		}
 	}
-	return false
+	return accounts
 }
 
 func (n *AccountEventsNotificator) unsubscribe(userID telegram.UserID) {
@@ -134,32 +134,31 @@ func (n *AccountEventsNotificator) accountSubscribers(account ton.AccountID) []t
 	return maps.Keys(subs)
 }
 
-func (n *AccountEventsNotificator) notify(hash string, messageCh chan<- telegram.Message) {
-	var event *tonapiClient.Event
-	err := retry.Do(func() error {
-		e, err := n.client.GetEvent(context.TODO(), tonapiClient.GetEventParams{EventID: hash})
-		if err != nil {
-			return err
-		}
-		event = e
-		return nil
-	}, retry.Attempts(10), retry.Delay(300*time.Millisecond))
-
-	if err != nil {
-		n.logger.Error("GetEvent() failed", zap.Error(err))
-		return
-	}
-
-	for _, action := range event.Actions {
-		for _, account := range action.SimplePreview.Accounts {
-			addr, err := tongo.ParseAddress(account.Address)
-			if err != nil {
-				n.logger.Error("tongo.ParseAccount() failed",
-					zap.Error(err),
-					zap.String("address", account.Address))
-				return
+func (n *AccountEventsNotificator) notify(accounts []ton.AccountID, hash string, messageCh chan<- telegram.Message) {
+	for _, account := range accounts {
+		var event *tonapiClient.AccountEvent
+		err := retry.Do(func() error {
+			params := tonapiClient.GetAccountEventParams{
+				AccountID: account.ToRaw(),
+				EventID:   hash,
+				SubjectOnly: tonapiClient.OptBool{
+					Value: true,
+					Set:   true,
+				},
 			}
-			subscribers := n.accountSubscribers(addr.ID)
+			e, err := n.client.GetAccountEvent(context.TODO(), params)
+			if err != nil {
+				return err
+			}
+			event = e
+			return nil
+		}, retry.Attempts(10), retry.Delay(300*time.Millisecond))
+		if err != nil {
+			n.logger.Error("GetAccountEvent() failed", zap.Error(err))
+			continue
+		}
+		subscribers := n.accountSubscribers(account)
+		for _, action := range event.Actions {
 			for _, userID := range subscribers {
 				messageCh <- telegram.Message{
 					UserID: userID,
@@ -185,8 +184,8 @@ func (n *AccountEventsNotificator) Run(ctx context.Context, messageCh chan<- tel
 						zap.String("data", string(msg.Data)))
 					return
 				}
-				if n.isSubscribedAny(data.AccountIDs) {
-					go n.notify(data.Hash, messageCh)
+				if accounts := n.subscribedAccounts(data.AccountIDs); len(accounts) > 0 {
+					go n.notify(accounts, data.Hash, messageCh)
 				}
 			}
 		})
