@@ -5,10 +5,13 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/tonkeeper/tonkeeper-twa-api/pkg/telegram"
 	"go.uber.org/zap"
+
+	"github.com/tonkeeper/tonkeeper-twa-api/pkg/telegram"
 )
 
+// ClientID is a unique identifier of a client.
+// See more details at https://github.com/ton-blockchain/ton-connect/blob/main/bridge.md#http-bridge.
 type ClientID string
 
 type bridgeSubscription struct {
@@ -16,6 +19,7 @@ type bridgeSubscription struct {
 	UserID telegram.UserID
 }
 
+// Bridge receives notifications from the HTTP Bridge and sends them to telegram users.
 type Bridge struct {
 	logger *zap.Logger
 
@@ -81,6 +85,7 @@ func (b *Bridge) HandleWebhook(clientID ClientID, topic string) {
 	}
 }
 
+// Subscribe subscribes a telegram user to the HTTP Bridge events.
 func (b *Bridge) Subscribe(userID telegram.UserID, clientID ClientID, origin string) error {
 	if err := b.storage.SubscribeToBridgeEvents(context.TODO(), userID, clientID, origin); err != nil {
 		return err
@@ -89,6 +94,7 @@ func (b *Bridge) Subscribe(userID telegram.UserID, clientID ClientID, origin str
 	return nil
 }
 
+// Unsubscribe unsubscribes a telegram user from the HTTP Bridge events.
 func (b *Bridge) Unsubscribe(userID telegram.UserID, clientID *ClientID) error {
 	if err := b.storage.UnsubscribeFromBridgeEvents(context.TODO(), userID, clientID); err != nil {
 		return err
