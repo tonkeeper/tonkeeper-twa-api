@@ -9,7 +9,8 @@ import (
 
 type Config struct {
 	API struct {
-		Port int `env:"PORT" envDefault:"7077"`
+		Port        int `env:"PORT" envDefault:"7077"`
+		MetricsPort int `env:"METRICS_PORT" envDefault:"9010"`
 	}
 	App struct {
 		LogLevel    string `env:"LOG_LEVEL" envDefault:"INFO"`
