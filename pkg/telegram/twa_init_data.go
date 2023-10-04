@@ -8,13 +8,18 @@ import (
 	"github.com/Telegram-Web-Apps/init-data-golang"
 )
 
+const (
+	maxInitDataLifetime = 1 * time.Hour
+)
+
+// ExtractUserIDFromInitData extracts user ID from twa init data.
+// See more details at https://docs.twa.dev/docs/libraries/init-data-golang.
 func ExtractUserIDFromInitData(data string, telegramSecret string) (UserID, error) {
-	// TODO: use right duration
 	twaInitData, err := base64.StdEncoding.DecodeString(data)
 	if err != nil {
 		return 0, fmt.Errorf("failed to decode init data")
 	}
-	if err := initdata.Validate(string(twaInitData), telegramSecret, time.Duration(0)); err != nil {
+	if err := initdata.Validate(string(twaInitData), telegramSecret, maxInitDataLifetime); err != nil {
 		return 0, fmt.Errorf("failed to validate init data")
 	}
 	parsedData, err := initdata.Parse(string(twaInitData))
