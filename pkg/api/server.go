@@ -11,22 +11,13 @@ import (
 	"github.com/tonkeeper/tonkeeper-twa-api/pkg/api/oas"
 )
 
+// Server is an HTTP server that serves the API described in api/tonkeeper-twa-api.yaml.
 type Server struct {
 	logger     *zap.Logger
 	httpServer *http.Server
 }
 
-type ServerOptions struct {
-}
-
-type ServerOption func(options *ServerOptions)
-
-func NewServer(log *zap.Logger, pool *pgxpool.Pool, handler *Handler, address string, opts ...ServerOption) (*Server, error) {
-	options := &ServerOptions{}
-	for _, o := range opts {
-		o(options)
-	}
-
+func NewServer(log *zap.Logger, pool *pgxpool.Pool, handler *Handler, address string) (*Server, error) {
 	ogenMiddlewares := []oas.Middleware{ogenLoggingMiddleware(log)}
 	ogenServer, err := oas.NewServer(handler,
 		oas.WithMiddleware(ogenMiddlewares...))
