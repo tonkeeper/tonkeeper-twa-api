@@ -4,6 +4,7 @@ go 1.20
 
 require (
 	github.com/Telegram-Web-Apps/init-data-golang v1.1.1
+	github.com/avast/retry-go v3.0.0+incompatible
 	github.com/caarlos0/env/v6 v6.10.1
 	github.com/go-faster/errors v0.6.1
 	github.com/go-faster/jx v1.1.0
@@ -15,8 +16,8 @@ require (
 	github.com/r3labs/sse/v2 v2.10.0
 	github.com/rs/cors v1.10.0
 	github.com/stretchr/testify v1.8.4
-	github.com/tonkeeper/opentonapi v1.0.1-0.20230927063627-355a22c175b5
-	github.com/tonkeeper/tongo v1.3.1-0.20231004105015-243489c1eb93
+	github.com/tonkeeper/opentonapi v1.1.2-0.20231003160018-2a375104f6b7
+	github.com/tonkeeper/tongo v1.3.1-0.20231004110007-b929afe04f49
 	go.opentelemetry.io/otel v1.18.0
 	go.opentelemetry.io/otel/metric v1.18.0
 	go.opentelemetry.io/otel/trace v1.18.0

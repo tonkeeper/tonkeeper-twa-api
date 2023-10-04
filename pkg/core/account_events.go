@@ -4,18 +4,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"sync"
 	"time"
 
-	ht "github.com/ogen-go/ogen/http"
+	"github.com/avast/retry-go"
 	"github.com/r3labs/sse/v2"
 	tonapiClient "github.com/tonkeeper/opentonapi/client"
 	"github.com/tonkeeper/tongo"
 	"github.com/tonkeeper/tongo/ton"
-	"github.com/tonkeeper/tonkeeper-twa-api/pkg/telegram"
 	"go.uber.org/zap"
 	"golang.org/x/exp/maps"
+
+	"github.com/tonkeeper/tonkeeper-twa-api/pkg/telegram"
 )
 
 type AccountEventsNotificator struct {
@@ -27,22 +27,10 @@ type AccountEventsNotificator struct {
 	mu               sync.RWMutex
 	subsPerUserID    map[telegram.UserID]map[ton.AccountID]struct{}
 	subsPerAccountID map[ton.AccountID]map[telegram.UserID]struct{}
-	events           map[string]struct{}
 }
-
-type client struct {
-	tonapiKey string
-}
-
-func (c client) Do(r *http.Request) (*http.Response, error) {
-	r.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.tonapiKey))
-	return http.DefaultClient.Do(r)
-}
-
-var _ ht.Client = &client{}
 
 func NewNotificator(logger *zap.Logger, storage Storage, tonapiKey string) (*AccountEventsNotificator, error) {
-	cli, err := tonapiClient.NewClient("https://tonapi.io", tonapiClient.WithClient(client{tonapiKey: tonapiKey}))
+	cli, err := tonapiClient.NewClient("https://tonapi.io", tonapiClient.WithTonApiKey(tonapiKey))
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +57,6 @@ func NewNotificator(logger *zap.Logger, storage Storage, tonapiKey string) (*Acc
 		storage:          storage,
 		subsPerAccountID: subsPerAccountID,
 		subsPerUserID:    subsPerUserID,
-		events:           make(map[string]struct{}),
 	}, nil
 }
 
@@ -92,11 +79,9 @@ func (n *AccountEventsNotificator) Subscribe(userID telegram.UserID, account ton
 	return nil
 }
 
-// TransactionEventData represents the data part of a new-transaction event.
-type TransactionEventData struct {
-	AccountID tongo.AccountID `json:"account_id"`
-	Lt        uint64          `json:"lt"`
-	TxHash    string          `json:"tx_hash"`
+type TraceEventData struct {
+	AccountIDs []tongo.AccountID `json:"accounts"`
+	Hash       string            `json:"hash"`
 }
 
 func (n *AccountEventsNotificator) IsSubscribed(userID telegram.UserID, account ton.AccountID) bool {
@@ -110,11 +95,16 @@ func (n *AccountEventsNotificator) IsSubscribed(userID telegram.UserID, account 
 	return ok
 }
 
-func (n *AccountEventsNotificator) isSubscribed(account ton.AccountID) bool {
+// isSubscribedAny returns true if we are subscribed to any of the given accounts.
+func (n *AccountEventsNotificator) isSubscribedAny(accountIDs []ton.AccountID) bool {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
-	_, ok := n.subsPerAccountID[account]
-	return ok
+	for _, accountID := range accountIDs {
+		if _, ok := n.subsPerAccountID[accountID]; ok {
+			return true
+		}
+	}
+	return false
 }
 
 func (n *AccountEventsNotificator) unsubscribe(userID telegram.UserID) {
@@ -144,45 +134,30 @@ func (n *AccountEventsNotificator) accountSubscribers(account ton.AccountID) []t
 	return maps.Keys(subs)
 }
 
-func (n *AccountEventsNotificator) startEventProcessing(eventID string) bool {
-	n.mu.Lock()
-	defer n.mu.Unlock()
-	if _, ok := n.events[eventID]; ok {
-		return false
-	}
-	n.events[eventID] = struct{}{}
-	return true
-}
-
-func (n *AccountEventsNotificator) stopEventProcessing(eventID string) {
-	n.mu.Lock()
-	defer n.mu.Unlock()
-	delete(n.events, eventID)
-}
-
 func (n *AccountEventsNotificator) notify(hash string, messageCh chan<- telegram.Message) {
-	event, err := n.client.GetEvent(context.TODO(), tonapiClient.GetEventParams{EventID: hash})
+	var event *tonapiClient.Event
+	err := retry.Do(func() error {
+		e, err := n.client.GetEvent(context.TODO(), tonapiClient.GetEventParams{EventID: hash})
+		if err != nil {
+			return err
+		}
+		event = e
+		return nil
+	}, retry.Attempts(10), retry.Delay(300*time.Millisecond))
+
 	if err != nil {
-		panic(err)
-	}
-	if !n.startEventProcessing(event.EventID) {
+		n.logger.Error("GetEvent() failed", zap.Error(err))
 		return
 	}
-	eventID := event.EventID
-	defer n.stopEventProcessing(eventID)
 
-	for event.InProgress {
-		time.Sleep(10 * time.Second)
-		event, err = n.client.GetEvent(context.TODO(), tonapiClient.GetEventParams{EventID: hash})
-		if err != nil {
-			panic(err)
-		}
-	}
 	for _, action := range event.Actions {
 		for _, account := range action.SimplePreview.Accounts {
 			addr, err := tongo.ParseAddress(account.Address)
 			if err != nil {
-				panic(err)
+				n.logger.Error("tongo.ParseAccount() failed",
+					zap.Error(err),
+					zap.String("address", account.Address))
+				return
 			}
 			subscribers := n.accountSubscribers(addr.ID)
 			for _, userID := range subscribers {
@@ -197,22 +172,21 @@ func (n *AccountEventsNotificator) notify(hash string, messageCh chan<- telegram
 
 func (n *AccountEventsNotificator) Run(ctx context.Context, messageCh chan<- telegram.Message) {
 	for {
-		sseClient := sse.NewClient("https://tonapi.io/v2/sse/accounts/transactions?accounts=ALL")
+		sseClient := sse.NewClient("https://dev.tonapi.io/v2/sse/accounts/traces?accounts=ALL")
 		err := sseClient.SubscribeWithContext(ctx, "", func(msg *sse.Event) {
 			switch string(msg.Event) {
 			case "heartbeat":
 				return
 			case "message":
-				data := TransactionEventData{}
+				data := TraceEventData{}
 				if err := json.Unmarshal(msg.Data, &data); err != nil {
 					n.logger.Error("json.Unmarshal() failed",
 						zap.Error(err),
 						zap.String("data", string(msg.Data)))
 					return
 				}
-				if n.isSubscribed(data.AccountID) {
-					fmt.Printf("accountID: %v, lt: %v, tx hash: %x\n", data.AccountID.ToRaw(), data.Lt, data.TxHash)
-					go n.notify(data.TxHash, messageCh)
+				if n.isSubscribedAny(data.AccountIDs) {
+					go n.notify(data.Hash, messageCh)
 				}
 			}
 		})
