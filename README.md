@@ -21,13 +21,16 @@ to authenticate telegram users and their wallets and subscribe to events from th
 
 Environment variables:
 
-| Env variable              | Description                                                                                                                                                                        |
-|---------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `PORT`                    | Port to listen on, the default is `7077`                                                                                                                                           |
-| `TON_API_KEY`             | An optional tonapi.io API key. You can get it at [TonConsole](https://tonconsole.com/). Without a key, the TonAPI will work in a limited mode.                                     |
-| `TON_CONNECT_SECRET`      | A secret key that is unique per installation. Used in authentication process to verify ownership of a wallet.                                                                      |
-| `TELEGRAM_BOT_SECRET_KEY` | A secret key of your telegram bot. Used to work with telegram API and process [twa init data](https://docs.twa.dev/docs/launch-params/init-data#authorization-and-authentication). |
-| `POSTGRES_URI`            | A connection string for a postgres database. An example: `postgres://user:password@localhost:5432/tonkeeper_twa_api`                                                               |
+| Env variable               | Description                                                                                                                                                                                    |
+|----------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `PORT`                     | Port to listen on, default is `7077`                                                                                                                                                           |
+| `LOG_LEVEL`                | Log level, default is INFO                                                                                                                                                                     | 
+| `LITE_SERVERS`             | A comma-separated list of TON lite servers to work with. Each server has the following format: **ip:port:public-key**. <br/>Ex: "127.0.0.1:14395:6PGkPQSbyFp12esf1NqmDOaLoFA8i9+Mp5+cAx5wtTU=" | 
+| `METRICS_PORT`             | A port number used to expose `/metrics` endpoint with prometheus metrics, default is 9010                                                                                                      | 
+| `TON_API_KEY`              | An optional tonapi.io API key. You can get it at [TonConsole](https://tonconsole.com/). Without a key, the TonAPI will work in a limited mode.                                                 |
+| `TON_CONNECT_SECRET`       | A secret key that is unique per installation. Used in authentication process to verify ownership of a wallet.                                                                                  |
+| `TELEGRAM_BOT_SECRET_KEY`  | A secret key of your telegram bot. Used to work with telegram API and process [twa init data](https://docs.twa.dev/docs/launch-params/init-data#authorization-and-authentication).             |
+| `POSTGRES_URI`             | A connection string for a postgres database. An example: `postgres://user:password@localhost:5432/tonkeeper_twa_api`                                                                           |
 
 
 TODO: how to run it in docker

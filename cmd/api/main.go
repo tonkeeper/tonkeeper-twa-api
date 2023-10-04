@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/http"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
@@ -68,6 +70,16 @@ func main() {
 	if err != nil {
 		logger.Fatal("api.NewServer() failed", zap.Error(err))
 	}
+	metricServer := http.Server{
+		Addr:    fmt.Sprintf(":%v", cfg.API.MetricsPort),
+		Handler: promhttp.Handler(),
+	}
+	go func() {
+		if err := metricServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Fatal("listen and serve", zap.Error(err))
+		}
+	}()
+
 	fmt.Printf("running server :%v\n", cfg.API.Port)
 	server.Run()
 }
