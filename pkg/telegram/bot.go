@@ -11,7 +11,7 @@ import (
 
 var (
 	messageCounter = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "message_counter",
+		Name: "twa_api_message_counter",
 		Help: "Number of telegram messages sent",
 	})
 )
