@@ -3,6 +3,8 @@ package core
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"net/http"
 	"sync"
 	"time"
 
@@ -38,6 +40,23 @@ type AccountEventsNotificator struct {
 }
 
 func NewNotificator(logger *zap.Logger, storage Storage, tonapiKey string) (*AccountEventsNotificator, error) {
+	if len(tonapiKey) > 0 {
+		req, err := http.NewRequest(http.MethodGet, "https://tonapi.io/v2/me", nil)
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("Authorization", "Bearer "+tonapiKey)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return nil, err
+		}
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("invalid tonapi key")
+		}
+		logger.Info("tonapi.io key is valid")
+	} else {
+		logger.Warn("tonapi.io key is not set")
+	}
 	cli, err := tonapiClient.NewClient("https://tonapi.io", tonapiClient.WithTonApiKey(tonapiKey))
 	if err != nil {
 		return nil, err
@@ -186,27 +205,33 @@ func (n *AccountEventsNotificator) notify(accounts []ton.AccountID, hash string,
 	}
 }
 
+func (n *AccountEventsNotificator) sseSubscribe(ctx context.Context, messageCh chan<- telegram.Message) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	sseClient := sse.NewClient("https://tonapi.io/v2/sse/accounts/traces?accounts=ALL")
+	return sseClient.SubscribeWithContext(ctx, "", func(msg *sse.Event) {
+		switch string(msg.Event) {
+		case "heartbeat":
+			return
+		case "message":
+			data := TraceEventData{}
+			if err := json.Unmarshal(msg.Data, &data); err != nil {
+				n.logger.Error("json.Unmarshal() failed",
+					zap.Error(err),
+					zap.String("data", string(msg.Data)))
+				return
+			}
+			if accounts := n.subscribedAccounts(data.AccountIDs); len(accounts) > 0 {
+				go n.notify(accounts, data.Hash, messageCh)
+			}
+		}
+	})
+}
+
 func (n *AccountEventsNotificator) Run(ctx context.Context, messageCh chan<- telegram.Message) {
 	for {
-		sseClient := sse.NewClient("https://tonapi.io/v2/sse/accounts/traces?accounts=ALL")
-		err := sseClient.SubscribeWithContext(ctx, "", func(msg *sse.Event) {
-			switch string(msg.Event) {
-			case "heartbeat":
-				return
-			case "message":
-				data := TraceEventData{}
-				if err := json.Unmarshal(msg.Data, &data); err != nil {
-					n.logger.Error("json.Unmarshal() failed",
-						zap.Error(err),
-						zap.String("data", string(msg.Data)))
-					return
-				}
-				if accounts := n.subscribedAccounts(data.AccountIDs); len(accounts) > 0 {
-					go n.notify(accounts, data.Hash, messageCh)
-				}
-			}
-		})
-		if err != nil {
+		if err := n.sseSubscribe(ctx, messageCh); err != nil {
 			n.logger.Error("sseClient.Subscribe() failed", zap.Error(err))
 			time.Sleep(10 * time.Second)
 		}
