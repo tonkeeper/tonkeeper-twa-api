@@ -3,7 +3,6 @@ package core
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"sync"
 	"time"
 
@@ -158,12 +157,14 @@ func (n *AccountEventsNotificator) notify(accounts []ton.AccountID, hash string,
 			continue
 		}
 		subscribers := n.accountSubscribers(account)
-		for _, action := range event.Actions {
-			for _, userID := range subscribers {
+		msgs := formatMessages(account, event)
+		for _, userID := range subscribers {
+			for _, msg := range msgs {
 				messageCh <- telegram.Message{
 					UserID: userID,
-					Text:   fmt.Sprintf("%v", action.SimplePreview.Description),
+					Text:   msg,
 				}
+
 			}
 		}
 	}
