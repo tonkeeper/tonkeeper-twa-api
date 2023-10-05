@@ -176,7 +176,7 @@ func (n *AccountEventsNotificator) notify(accounts []ton.AccountID, hash string,
 		rawAccounts = append(rawAccounts, account.ToRaw())
 	}
 
-	n.logger.Debug("notify",
+	n.logger.Info("notify",
 		zap.String("hash", hash),
 		zap.Strings("accounts", rawAccounts))
 
