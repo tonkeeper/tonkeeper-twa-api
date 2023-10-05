@@ -1,4 +1,4 @@
-FROM golang:1.20-alpine as builder
+FROM docker.io/library/golang:1.20-alpine as builder
 
 WORKDIR /go/src/github.com/tonkeeper/tonkeeper-twa-api/
 
@@ -19,7 +19,7 @@ RUN apk add make
 RUN make gen
 RUN make build
 
-FROM alpine:latest 
+FROM docker.io/library/alpine:latest
 RUN apk --no-cache add ca-certificates \
   && update-ca-certificates
 
