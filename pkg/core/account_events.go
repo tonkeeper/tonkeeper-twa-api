@@ -240,7 +240,7 @@ func (n *AccountEventsNotificator) sseSubscribe(ctx context.Context, messageCh c
 		case "message":
 			data := TraceEventData{}
 
-			n.logger.Debug("trace event",
+			n.logger.Info("trace event",
 				zap.String("event-id", string(msg.ID)))
 
 			if err := json.Unmarshal(msg.Data, &data); err != nil {
