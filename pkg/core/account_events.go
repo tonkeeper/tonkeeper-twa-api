@@ -234,7 +234,7 @@ func (n *AccountEventsNotificator) sseSubscribe(ctx context.Context, messageCh c
 	return sseClient.SubscribeWithContext(ctx, "", func(msg *sse.Event) {
 		switch string(msg.Event) {
 		case "heartbeat":
-			n.logger.Debug("sse heartbeat")
+			n.logger.Info("sse heartbeat")
 			return
 
 		case "message":
