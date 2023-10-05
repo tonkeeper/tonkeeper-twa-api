@@ -171,7 +171,7 @@ func (n *AccountEventsNotificator) notify(accounts []ton.AccountID, hash string,
 
 func (n *AccountEventsNotificator) Run(ctx context.Context, messageCh chan<- telegram.Message) {
 	for {
-		sseClient := sse.NewClient("https://dev.tonapi.io/v2/sse/accounts/traces?accounts=ALL")
+		sseClient := sse.NewClient("https://tonapi.io/v2/sse/accounts/traces?accounts=ALL")
 		err := sseClient.SubscribeWithContext(ctx, "", func(msg *sse.Event) {
 			switch string(msg.Event) {
 			case "heartbeat":
