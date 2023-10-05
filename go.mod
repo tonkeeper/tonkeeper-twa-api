@@ -15,6 +15,7 @@ require (
 	github.com/prometheus/client_golang v1.14.0
 	github.com/r3labs/sse/v2 v2.10.0
 	github.com/rs/cors v1.10.0
+	github.com/shopspring/decimal v1.3.1
 	github.com/stretchr/testify v1.8.4
 	github.com/tonkeeper/opentonapi v1.1.2-0.20231003160018-2a375104f6b7
 	github.com/tonkeeper/tongo v1.3.1-0.20231004110007-b929afe04f49
