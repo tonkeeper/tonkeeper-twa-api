@@ -29,8 +29,9 @@ var (
 )
 
 type AccountEventsNotificator struct {
-	logger  *zap.Logger
-	storage Storage
+	logger    *zap.Logger
+	storage   Storage
+	tonapiKey string
 
 	client *tonapiClient.Client
 
@@ -82,6 +83,7 @@ func NewNotificator(logger *zap.Logger, storage Storage, tonapiKey string) (*Acc
 	accountEventsSubscribers.Set(float64(len(subsPerUserID)))
 
 	return &AccountEventsNotificator{
+		tonapiKey:        tonapiKey,
 		logger:           logger,
 		client:           cli,
 		storage:          storage,
@@ -174,7 +176,7 @@ func (n *AccountEventsNotificator) notify(accounts []ton.AccountID, hash string,
 		rawAccounts = append(rawAccounts, account.ToRaw())
 	}
 
-	n.logger.Info("notify",
+	n.logger.Debug("notify",
 		zap.String("hash", hash),
 		zap.Strings("accounts", rawAccounts))
 
@@ -226,16 +228,19 @@ func (n *AccountEventsNotificator) sseSubscribe(ctx context.Context, messageCh c
 	defer cancel()
 
 	sseClient := sse.NewClient("https://tonapi.io/v2/sse/accounts/traces?accounts=ALL")
+	if len(n.tonapiKey) > 0 {
+		sseClient.Headers["Authorization"] = fmt.Sprintf("Bearer %s", n.tonapiKey)
+	}
 	return sseClient.SubscribeWithContext(ctx, "", func(msg *sse.Event) {
 		switch string(msg.Event) {
 		case "heartbeat":
-			n.logger.Info("sse heartbeat")
+			n.logger.Debug("sse heartbeat")
 			return
 
 		case "message":
 			data := TraceEventData{}
 
-			n.logger.Info("trace event",
+			n.logger.Debug("trace event",
 				zap.String("event-id", string(msg.ID)))
 
 			if err := json.Unmarshal(msg.Data, &data); err != nil {
