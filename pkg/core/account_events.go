@@ -169,7 +169,20 @@ func (n *AccountEventsNotificator) accountSubscribers(account ton.AccountID) []t
 }
 
 func (n *AccountEventsNotificator) notify(accounts []ton.AccountID, hash string, messageCh chan<- telegram.Message) {
+	rawAccounts := make([]string, 0, len(accounts))
 	for _, account := range accounts {
+		rawAccounts = append(rawAccounts, account.ToRaw())
+	}
+
+	n.logger.Info("notify",
+		zap.String("hash", hash),
+		zap.Strings("accounts", rawAccounts))
+
+	for _, account := range accounts {
+		subscribers := n.accountSubscribers(account)
+		if len(subscribers) == 0 {
+			continue
+		}
 		var event *tonapiClient.AccountEvent
 		err := retry.Do(func() error {
 			params := tonapiClient.GetAccountEventParams{
@@ -186,13 +199,16 @@ func (n *AccountEventsNotificator) notify(accounts []ton.AccountID, hash string,
 			}
 			event = e
 			return nil
-		}, retry.Attempts(10), retry.Delay(300*time.Millisecond))
+		}, retry.Attempts(3), retry.Delay(1*time.Second))
 		if err != nil {
 			n.logger.Error("GetAccountEvent() failed", zap.Error(err))
 			continue
 		}
-		subscribers := n.accountSubscribers(account)
 		msgs := formatMessages(account, event)
+		n.logger.Info("send-notification",
+			zap.String("hash", hash),
+			zap.Int("#messages", len(msgs)),
+			zap.Int("#subscribers", len(subscribers)))
 		for _, userID := range subscribers {
 			for _, msg := range msgs {
 				messageCh <- telegram.Message{
