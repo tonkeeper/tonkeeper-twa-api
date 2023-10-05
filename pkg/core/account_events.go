@@ -229,9 +229,14 @@ func (n *AccountEventsNotificator) sseSubscribe(ctx context.Context, messageCh c
 	return sseClient.SubscribeWithContext(ctx, "", func(msg *sse.Event) {
 		switch string(msg.Event) {
 		case "heartbeat":
+			n.logger.Info("sse heartbeat")
 			return
 		case "message":
 			data := TraceEventData{}
+
+			n.logger.Info("trace event",
+				zap.String("event-id", string(msg.ID)))
+
 			if err := json.Unmarshal(msg.Data, &data); err != nil {
 				n.logger.Error("json.Unmarshal() failed",
 					zap.Error(err),
