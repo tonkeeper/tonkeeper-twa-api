@@ -231,6 +231,7 @@ func (n *AccountEventsNotificator) sseSubscribe(ctx context.Context, messageCh c
 		case "heartbeat":
 			n.logger.Info("sse heartbeat")
 			return
+
 		case "message":
 			data := TraceEventData{}
 
