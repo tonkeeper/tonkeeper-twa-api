@@ -217,21 +217,17 @@ func (n *AccountEventsNotificator) notify(accounts []ton.AccountID, hash string,
 					UserID: userID,
 					Text:   msg,
 				}
-
 			}
 		}
 	}
 }
 
 func (n *AccountEventsNotificator) sseSubscribe(ctx context.Context, messageCh chan<- telegram.Message) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
 	sseClient := sse.NewClient("https://tonapi.io/v2/sse/accounts/traces?accounts=ALL")
 	if len(n.tonapiKey) > 0 {
 		sseClient.Headers["Authorization"] = fmt.Sprintf("Bearer %s", n.tonapiKey)
 	}
-	return sseClient.SubscribeWithContext(ctx, "", func(msg *sse.Event) {
+	return sseClient.Subscribe("", func(msg *sse.Event) {
 		switch string(msg.Event) {
 		case "heartbeat":
 			n.logger.Info("sse heartbeat")
