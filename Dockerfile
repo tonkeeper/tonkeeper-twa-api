@@ -1,4 +1,4 @@
-FROM golang:1.20-bullseye as builder
+FROM golang:1.20-alpine as builder
 
 WORKDIR /go/src/github.com/tonkeeper/tonkeeper-twa-api/
 
@@ -15,16 +15,14 @@ COPY pkg pkg
 COPY Makefile .
 
 # Build
+RUN apk add make
 RUN make gen
 RUN make build
 
-FROM ubuntu:20.04 as runner
-RUN apt-get update && \
-    apt-get install -y openssl ca-certificates && \
-    rm -rf /var/lib/apt/lists/*
+FROM alpine:latest 
+RUN apk --no-cache add ca-certificates \
+  && update-ca-certificates
 
-COPY --from=builder /go/pkg/mod/github.com/tonkeeper/tongo*/lib/linux /app/lib/
 COPY --from=builder /go/src/github.com/tonkeeper/tonkeeper-twa-api/bin/twa-api .
 
-ENV LD_LIBRARY_PATH=/app/lib/
 ENTRYPOINT ["/twa-api"]
