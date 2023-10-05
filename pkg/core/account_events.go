@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/avast/retry-go"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/r3labs/sse/v2"
 	tonapiClient "github.com/tonkeeper/opentonapi/client"
 	"github.com/tonkeeper/tongo"
@@ -15,6 +17,13 @@ import (
 	"golang.org/x/exp/maps"
 
 	"github.com/tonkeeper/tonkeeper-twa-api/pkg/telegram"
+)
+
+var (
+	accountEventsSubscribers = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "twa_api_account_event_subscribers",
+		Help: "Number of account-events subscribers",
+	})
 )
 
 type AccountEventsNotificator struct {
@@ -50,6 +59,9 @@ func NewNotificator(logger *zap.Logger, storage Storage, tonapiKey string) (*Acc
 		subsPerUserID[sub.TelegramUserID][sub.Account] = struct{}{}
 		subsPerAccountID[sub.Account][sub.TelegramUserID] = struct{}{}
 	}
+
+	accountEventsSubscribers.Set(float64(len(subsPerUserID)))
+
 	return &AccountEventsNotificator{
 		logger:           logger,
 		client:           cli,
@@ -63,6 +75,12 @@ func (n *AccountEventsNotificator) Subscribe(userID telegram.UserID, account ton
 	if err := n.storage.SubscribeToAccountEvents(context.TODO(), userID, account); err != nil {
 		return err
 	}
+	n.subscribe(userID, account)
+	n.updateMetrics()
+	return nil
+}
+
+func (n *AccountEventsNotificator) subscribe(userID telegram.UserID, account ton.Address) {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 	if _, ok := n.subsPerAccountID[account.ID]; !ok {
@@ -74,8 +92,6 @@ func (n *AccountEventsNotificator) Subscribe(userID telegram.UserID, account ton
 		n.subsPerUserID[userID] = make(map[ton.AccountID]struct{})
 	}
 	n.subsPerUserID[userID][account.ID] = struct{}{}
-
-	return nil
 }
 
 type TraceEventData struct {
@@ -202,5 +218,12 @@ func (n *AccountEventsNotificator) Unsubscribe(userID telegram.UserID) error {
 		return err
 	}
 	n.unsubscribe(userID)
+	n.updateMetrics()
 	return nil
+}
+
+func (n *AccountEventsNotificator) updateMetrics() {
+	n.mu.RLock()
+	defer n.mu.RUnlock()
+	accountEventsSubscribers.Set(float64(len(n.subsPerUserID)))
 }

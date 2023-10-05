@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"go.uber.org/zap"
 
 	"github.com/tonkeeper/tonkeeper-twa-api/pkg/telegram"
@@ -31,6 +33,13 @@ type Bridge struct {
 	clientIDsPerUser map[telegram.UserID]map[ClientID]struct{}
 }
 
+var (
+	bridgeSubscribers = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "twa_api_bridge_subscribers",
+		Help: "Number of bridge subscribers",
+	})
+)
+
 func NewBridge(logger *zap.Logger, storage Storage, messageCh chan<- telegram.Message) (*Bridge, error) {
 	subscriptions, err := storage.GetBridgeSubscriptions(context.TODO())
 	if err != nil {
@@ -48,6 +57,7 @@ func NewBridge(logger *zap.Logger, storage Storage, messageCh chan<- telegram.Me
 			UserID: sub.TelegramUserID,
 		}
 	}
+	bridgeSubscribers.Set(float64(len(clientIDsPerUser)))
 	return &Bridge{
 		logger:           logger,
 		storage:          storage,
@@ -91,6 +101,7 @@ func (b *Bridge) Subscribe(userID telegram.UserID, clientID ClientID, origin str
 		return err
 	}
 	b.subscribe(userID, clientID, origin)
+	b.updateMetrics()
 	return nil
 }
 
@@ -104,6 +115,7 @@ func (b *Bridge) Unsubscribe(userID telegram.UserID, clientID *ClientID) error {
 	} else {
 		b.cancelSpecificSubscription(userID, *clientID)
 	}
+	b.updateMetrics()
 	return nil
 }
 
@@ -156,4 +168,10 @@ func (b *Bridge) subscription(clientID ClientID) (bridgeSubscription, bool) {
 	defer b.mu.RUnlock()
 	sub, ok := b.subsPerClientID[clientID]
 	return sub, ok
+}
+
+func (b *Bridge) updateMetrics() {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	bridgeSubscribers.Set(float64(len(b.clientIDsPerUser)))
 }
